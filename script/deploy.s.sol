@@ -4,8 +4,6 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
 
-import {ContractRegistry} from "src/ContractRegistry.sol";
-
 contract deploy is Script {
     address internal DEPLOYER;
 
@@ -17,10 +15,6 @@ contract deploy is Script {
         console.log(DEPLOYER.balance);
 
         vm.startBroadcast(pk);
-
-        ContractRegistry c_registry = new ContractRegistry(DEPLOYER);
-
-        c_registry.whitelistAddr(address(502));
 
         vm.stopBroadcast();
     }
