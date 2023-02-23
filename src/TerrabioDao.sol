@@ -5,11 +5,16 @@ pragma solidity ^0.8.13;
 import {LibFallbackRouter} from "./fallback_router/LibFallbackRouter.sol";
 
 contract TerrabioDao {
-    constructor(address fallbackRouter) {
-        (bool success, ) = fallbackRouter.delegatecall(
+    constructor(address daoAccess, address fallbackRouter) {
+        (bool success, ) = daoAccess.delegatecall(
             abi.encodeWithSignature("bootstrap()")
         );
-        if (!success) revert("Incorrect bootstrap");
+        if (!success) revert("DaoAccess: Incorrect bootstrap");
+
+        (success, ) = fallbackRouter.delegatecall(
+            abi.encodeWithSignature("bootstrap()")
+        );
+        if (!success) revert("Router: Incorrect bootstrap");
     }
 
     /// @dev Forwards calls to the appropriate implementation contract.

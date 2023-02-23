@@ -6,9 +6,11 @@ import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.
 
 import {ListLengthMismatch} from "src/common/Errors.sol";
 import {Implementation} from "src/common/Implementation.sol";
+import {ADMIN_ROLE} from "src/dao_access/Roles.sol";
+import {RoleControl} from "src/dao_access/RoleControl.sol";
 import {LibFallbackRouter} from "./LibFallbackRouter.sol";
 
-contract FallbackRouter is Implementation {
+contract FallbackRouter is Implementation, RoleControl {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     function bootstrap() external {
@@ -25,10 +27,11 @@ contract FallbackRouter is Implementation {
     /*////////////////////////////////////////////////////////////////////////////////////////////////
                                               EXTERNAL FUNCTIONS
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
+
     function batchUpdateFunction(
         bytes4[] memory selectors,
         address[] memory impls
-    ) public {
+    ) public onlyRole(ADMIN_ROLE) {
         LibFallbackRouter.Data storage data = _data();
         if (selectors.length != impls.length) revert ListLengthMismatch();
 
@@ -40,11 +43,14 @@ contract FallbackRouter is Implementation {
         }
     }
 
-    function updateFunction(bytes4 selector, address impl) external {
+    function updateFunction(bytes4 selector, address impl)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         _updateFunction(selector, impl, _data());
     }
 
-    function rollback(bytes4 selector) external {
+    function rollback(bytes4 selector) external onlyRole(ADMIN_ROLE) {
         LibFallbackRouter.Data storage data = _data();
         address currentImpl = data.impls[selector];
         address rollbackedImpl = data.history[selector][
