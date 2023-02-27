@@ -6,3 +6,7 @@
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
 	branch = v4.8.1
+[submodule "lib/dev-modules"]
+	path = lib/dev-modules
+	url = https://github.com/dl-solidity-library/dev-modules
+	branch = 2.3.0
