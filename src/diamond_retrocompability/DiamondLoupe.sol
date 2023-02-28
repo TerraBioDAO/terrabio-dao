@@ -2,23 +2,21 @@
 
 pragma solidity ^0.8.13;
 
+import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
+
+import "src/utils/DynamicalMemoryArray.sol";
 import "src/fallback_router/LibFallbackRouter.sol";
 import "./IDiamondLoupe.sol";
 
 contract DiamondLoupe is IDiamondLoupe {
+    using DynamicalMemoryArray for uint256;
+    using EnumerableSet for EnumerableSet.Bytes32Set;
+
     /// @notice Gets all facets and their selectors.
     /// @return facets_ Facet
-    function facets() external view override returns (Facet[] memory facets_) {
+    function facets() external view returns (Facet[] memory facets_) {
         LibFallbackRouter.Data storage data = LibFallbackRouter.accessData();
-        uint256 numFacets = ds.facetAddresses.length;
-        facets_ = new Facet[](numFacets);
-        for (uint256 i; i < numFacets; i++) {
-            address facetAddress_ = ds.facetAddresses[i];
-            facets_[i].facetAddress = facetAddress_;
-            facets_[i].functionSelectors = ds
-                .facetFunctionSelectors[facetAddress_]
-                .functionSelectors;
-        }
+        return _createFacets(data);
     }
 
     /// @notice Gets all the function selectors provided by a facet.
@@ -27,25 +25,27 @@ contract DiamondLoupe is IDiamondLoupe {
     function facetFunctionSelectors(address _facet)
         external
         view
-        override
         returns (bytes4[] memory facetFunctionSelectors_)
     {
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        facetFunctionSelectors_ = ds
-            .facetFunctionSelectors[_facet]
-            .functionSelectors;
+        LibFallbackRouter.Data storage data = LibFallbackRouter.accessData();
+        Facet[] memory facets_ = _createFacets(data);
+        for (uint256 i; i < facets_.length; ) {
+            if (facets_[i].facetAddress == _facet) {
+                return facets_[i].functionSelectors;
+            }
+        }
     }
 
     /// @notice Get all the facet addresses used by a diamond.
     /// @return facetAddresses_
-    function facetAddresses()
-        external
-        view
-        override
-        returns (address[] memory facetAddresses_)
-    {
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        facetAddresses_ = ds.facetAddresses;
+    function facetAddresses() external view returns (address[] memory) {
+        LibFallbackRouter.Data storage data = LibFallbackRouter.accessData();
+        Facet[] memory facets_ = _createFacets(data);
+        address[] memory facetAddresses_ = new address[](facets_.length);
+        for (uint256 i; i < facets_.length; ) {
+            facetAddresses_[i] = facets_[i].facetAddress;
+        }
+        return facetAddresses_;
     }
 
     /// @notice Gets the facet that supports the given selector.
@@ -55,71 +55,69 @@ contract DiamondLoupe is IDiamondLoupe {
     function facetAddress(bytes4 _functionSelector)
         external
         view
-        override
         returns (address facetAddress_)
     {
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        facetAddress_ = ds
-            .selectorToFacetAndPosition[_functionSelector]
-            .facetAddress;
+        return LibFallbackRouter.accessData().impls[_functionSelector];
     }
 
-    // This implements ERC-165.
-    function supportsInterface(bytes4 _interfaceId)
-        external
-        view
-        override
-        returns (bool)
-    {
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        return ds.supportedInterfaces[_interfaceId];
-    }
-
-    function _selectorsLookup(LibFallbackRouter.Data storage data)
+    function _createFacets(LibFallbackRouter.Data storage data)
         internal
         view
-        returns (bytes4[] memory selectors, address[] memory impls)
+        returns (Facet[] memory facets_)
     {
-        // define number of implementation (facets)
-        address[200] memory addresses;
         uint256 length = data.selectors.length();
-        uint256 numberOfImpls;
+        uint256 impls_key = DynamicalMemoryArray.create(200);
+
         for (uint256 i; i < length; ) {
-            address impl = data.impl[data.selectors.at(i)];
-            if (_checkForExistantImpl(addresses, impl, numberOfImpls)) {
-                addresses[numberOfImpls++] = impl;
+            // read addr impl
+            bytes4 selector = bytes4(data.selectors.at(i));
+            address impl = data.impls[selector];
+
+            // create key for address
+            uint256 selectors_key = uint160(impl) & 0xFFFF;
+
+            // get number of selector added
+            uint256 selectorsAdded = selectors_key.length();
+
+            // check if impl is known
+            if (selectorsAdded == 0) {
+                selectors_key.createAt();
+                impls_key.push(uint160(impl));
             }
+
+            // push selector
+            selectors_key.push(uint32(selector));
+
+            // loop
             unchecked {
                 ++i;
             }
         }
 
-        impls = new address[](numberOfImpls);
-        Facet[] memory facets = new Facet[](numberOfImpls);
-        for (uint256 i; i < numberOfImpls; ) {
-            facets[i].facetAddress = impls[i];
-            for (uint256 j; j < length; ) {}
-        }
-    }
+        // read memory and create facets
+        uint256 nbOfImpls = impls_key.length();
+        facets_ = new Facet[](nbOfImpls);
 
-    function _checkForExistantImpl(
-        address[200] addresses,
-        address impl,
-        uint256 limit
-    ) internal pure returns (bool isExistant) {
-        for (uint256 i; i < limit; ) {
-            if (addresses[i] == impl) {
-                isExistant = true;
-                break;
+        for (uint256 i; i < nbOfImpls; ) {
+            address impl = address(uint160(impls_key.at(i)));
+            uint256 selectors_key = uint160(impl) & 0xFFFF;
+
+            bytes4[] memory selectors = new bytes4[](selectors_key.length());
+            for (uint256 j; j < selectors_key.length(); ) {
+                selectors[j] = bytes4(uint32(selectors_key.at(j)));
+                unchecked {
+                    ++j;
+                }
             }
+
+            facets_[i] = Facet({
+                facetAddress: impl,
+                functionSelectors: selectors
+            });
+
             unchecked {
                 ++i;
             }
         }
     }
-
-    // struct Facet {
-    //     address facetAddress;
-    //     bytes4[] functionSelectors;
-    // }
 }

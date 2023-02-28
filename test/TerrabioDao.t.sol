@@ -12,8 +12,10 @@ import {LibDaoAccess} from "src/dao_access/LibDaoAccess.sol";
 import {LibFallbackRouter} from "src/fallback_router/LibFallbackRouter.sol";
 
 import {TerrabioDao} from "src/TerrabioDao.sol";
+
 import {FallbackRouter} from "src/fallback_router/FallbackRouter.sol";
 import {DaoAccess} from "src/dao_access/DaoAccess.sol";
+import {DiamondLoupe, IDiamondLoupe} from "src/diamond_retrocompability/DiamondLoupe.sol";
 
 contract TerrabioDao_test is Test {
     // main contract address
@@ -24,6 +26,8 @@ contract TerrabioDao_test is Test {
     address internal ACCESS;
     FallbackRouter internal router;
     address internal ROUTER;
+    DiamondLoupe internal diamond;
+    address internal DIAMOND;
 
     // roles
     address internal constant OWNER = address(501);
@@ -35,6 +39,9 @@ contract TerrabioDao_test is Test {
 
         access = new DaoAccess(OWNER);
         ACCESS = address(access);
+
+        diamond = new DiamondLoupe();
+        DIAMOND = address(diamond);
 
         TerrabioDao dao = new TerrabioDao(ACCESS, ROUTER);
         DAO = address(dao);
@@ -63,6 +70,7 @@ contract TerrabioDao_test is Test {
         vm.label(DAO, "DAO");
         vm.label(ACCESS, "ACCESS");
         vm.label(ROUTER, "ROUTER");
+        vm.label(DIAMOND, "DIAMOND");
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////
@@ -122,5 +130,28 @@ contract TerrabioDao_test is Test {
             router.getFunctionImpl(DaoAccess.getRoleAdmin.selector),
             ACCESS
         );
+    }
+
+    /*////////////////////////////////////////////////////////////////////////////////////////////////
+                                        ADD DIAMOND RETROCOMPABILITY
+    ////////////////////////////////////////////////////////////////////////////////////////////////*/
+    function test_diamond_AddRetrocompability() public {
+        bytes4[] memory selectors = new bytes4[](4);
+        address[] memory impl = new address[](4);
+        selectors[0] = DiamondLoupe.facets.selector;
+        selectors[1] = DiamondLoupe.facetFunctionSelectors.selector;
+        selectors[2] = DiamondLoupe.facetAddresses.selector;
+        selectors[3] = DiamondLoupe.facetAddress.selector;
+        impl[0] = DIAMOND;
+        impl[1] = DIAMOND;
+        impl[2] = DIAMOND;
+        impl[3] = DIAMOND;
+
+        vm.prank(OWNER);
+        FallbackRouter(DAO).batchUpdateFunction(selectors, impl);
+
+        DiamondLoupe.Facet[] memory facets = DiamondLoupe(DAO).facets();
+
+        assertEq(facets.length, 3);
     }
 }
