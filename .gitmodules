@@ -10,3 +10,6 @@
 	path = lib/dev-modules
 	url = https://github.com/dl-solidity-library/dev-modules
 	branch = 2.3.0
+[submodule "lib/dynamic-memory-arrays"]
+	path = lib/dynamic-memory-arrays
+	url = https://github.com/RaphaelHardFork/dynamic-memory-arrays
