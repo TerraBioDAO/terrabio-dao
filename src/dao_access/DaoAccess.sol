@@ -41,19 +41,19 @@ contract DaoAccess is Implementation {
         return _data().adminRole[role];
     }
 
-    function grantRole(bytes32 role, address account)
-        external
-        onlyAdminRole(role)
-    {
+    function grantRole(
+        bytes32 role,
+        address account
+    ) external onlyAdminRole(role) {
         if (hasRole(role, account)) {
             _data().roles[account] |= role;
         }
     }
 
-    function revokeRole(bytes32 role, address account)
-        external
-        onlyAdminRole(role)
-    {
+    function revokeRole(
+        bytes32 role,
+        address account
+    ) external onlyAdminRole(role) {
         if (hasRole(role, account)) {
             _data().roles[account] ^= role;
         }

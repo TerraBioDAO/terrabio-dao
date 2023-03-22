@@ -3,8 +3,8 @@
 pragma solidity ^0.8.13;
 
 import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
+import {DynamicalMemoryArray} from "dynamic-memory-arrays/DynamicalMemoryArray.sol";
 
-import "src/utils/DynamicalMemoryArray.sol";
 import "src/fallback_router/LibFallbackRouter.sol";
 import "./IDiamondLoupe.sol";
 
@@ -60,6 +60,28 @@ contract DiamondLoupe is IDiamondLoupe {
         return LibFallbackRouter.accessData().impls[_functionSelector];
     }
 
+    function createRandomArrays(uint256 seed)
+        external
+        pure
+        returns (uint256[] memory hashes, bytes4[] memory hashesIds)
+    {
+        uint256 randomLength = uint256(keccak256(abi.encode(seed))) % 10;
+        uint256 hashedArray = DynamicalMemoryArray.create(10);
+        uint256 hashedIdsArray = DynamicalMemoryArray.create(10);
+
+        for (uint256 i; i <= randomLength; i++) {
+            hashedArray.push(randomLength + i);
+            hashedIdsArray.push(uint32(uint256(keccak256(abi.encode(i)))));
+        }
+
+        hashes = hashedArray.toArray();
+        hashesIds = new bytes4[](hashedIdsArray.length());
+
+        for (uint256 i; i < hashedIdsArray.length(); i++) {
+            hashesIds[i] = bytes4(uint32(hashedIdsArray.at(i)));
+        }
+    }
+
     function _createFacets(LibFallbackRouter.Data storage data)
         internal
         view
@@ -81,12 +103,11 @@ contract DiamondLoupe is IDiamondLoupe {
 
             // check if impl is known
             if (selectorsAdded == 0) {
-                selectors_key.createAt();
                 impls_key.push(uint160(impl));
             }
 
             // push selector
-            selectors_key.push(uint32(selector));
+            selectors_key.pushAt(uint32(selector));
 
             // loop
             unchecked {

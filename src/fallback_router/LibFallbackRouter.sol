@@ -9,7 +9,7 @@ library LibFallbackRouter {
 
     struct Data {
         mapping(bytes4 => address) impls;
-        mapping(bytes4 => address[]) history;
+        mapping(bytes4 => address[]) history; // can be the last one
         EnumerableSet.Bytes32Set selectors;
     }
 
