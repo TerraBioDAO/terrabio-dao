@@ -21,7 +21,7 @@ library LibDaoAccess {
         bytes32 indexed adminRole
     );
 
-    /// @dev Error for inexistant selector
+    /// @dev Role's related errors
     error RoleZeroChecked();
     error NotSelfRenouncement();
     error NotRoleOperator(bytes32 role, bytes32 operator);

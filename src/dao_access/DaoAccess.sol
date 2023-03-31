@@ -13,7 +13,9 @@ contract DaoAccess is Implementation {
         LibDaoAccess.Data storage data = _data();
         bytes32 adminRole = ADMIN_ROLE | data.adminRole[role];
         bytes32 senderRole = data.roles[msg.sender];
-        if (senderRole & adminRole != adminRole)
+
+        // warning with default role 0
+        if (senderRole == 0 || senderRole & adminRole != senderRole)
             revert LibDaoAccess.NotRoleOperator(role, adminRole);
         _;
     }
@@ -32,20 +34,11 @@ contract DaoAccess is Implementation {
                                               EXTERNAL FUNCTIONS
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-    function hasRole(bytes32 role, address account) public view returns (bool) {
-        if (role == 0x0) revert LibDaoAccess.RoleZeroChecked();
-        return _data().roles[account] & role == role;
-    }
-
-    function getRoleAdmin(bytes32 role) external view returns (bytes32) {
-        return _data().adminRole[role];
-    }
-
     function grantRole(
         bytes32 role,
         address account
     ) external onlyAdminRole(role) {
-        if (hasRole(role, account)) {
+        if (!hasRole(role, account)) {
             _data().roles[account] |= role;
         }
     }
@@ -62,6 +55,26 @@ contract DaoAccess is Implementation {
     function renounceRole(bytes32 role, address account) external {
         if (account != msg.sender) revert LibDaoAccess.NotSelfRenouncement();
         _data().roles[account] ^= role;
+    }
+
+    /// @dev assign an admin role for a specific role
+    function setAdminRole(bytes32 role, bytes32 operator) external {
+        if (!hasRole(ADMIN_ROLE, msg.sender))
+            revert LibDaoAccess.MissingRole(msg.sender, ADMIN_ROLE);
+        _data().adminRole[role] = operator;
+    }
+
+    /*////////////////////////////////////////////////////////////////////////////////////////////////
+                                                    GETTERS
+    ////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+    function hasRole(bytes32 role, address account) public view returns (bool) {
+        if (role == 0x0) revert LibDaoAccess.RoleZeroChecked();
+        return _data().roles[account] & role == role;
+    }
+
+    function getRoleAdmin(bytes32 role) external view returns (bytes32) {
+        return _data().adminRole[role];
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////
