@@ -7,7 +7,8 @@ import {IDaoAccess} from "./IDaoAccess.sol";
 
 abstract contract RoleControl {
     modifier onlyRole(bytes32 role) {
-        if (LibDaoAccess.accessData().roles[msg.sender] & role != role)
+        bytes32 senderRole = LibDaoAccess.accessData().roles[msg.sender];
+        if (senderRole == 0 || senderRole & role != senderRole)
             revert LibDaoAccess.MissingRole(msg.sender, role);
         _;
     }
