@@ -54,4 +54,8 @@ contract FallbackRouter_test is Test {
         );
         router.updateFunction(selector, impl);
     }
+
+    function test_getSelectorList_ReturnListOfSelectors() public {
+        router.getSelectorList();
+    }
 }

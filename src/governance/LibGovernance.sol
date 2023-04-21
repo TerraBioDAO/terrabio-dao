@@ -7,24 +7,23 @@ library LibGovernance {
         // --- status ---
         bool active;
         bool proceeded;
-        bool canceled;
+        bool cancelled;
         // --- timing ---
         uint48 startAt;
         uint48 endAt;
-        // --- content ---
-        bytes[] datas;
-        // --- info ---
-        address proposer;
+        uint48 gracePeriod;
         // --- vote parameters ---
         uint16 threshold; // 0 ~ 10000
-        uint48 gracePeriod;
-        // --- vote ---
-        mapping(address => bool) hasVote;
         // --- result ---
         uint256 nbYes;
         uint256 nbNo;
         uint256 nbNota;
         uint256 membersVoted;
+        // --- vote info ---
+        address proposer;
+        mapping(address => bool) hasVote;
+        // --- content ---
+        bytes[] datas;
     }
 
     struct StandardVoteParameters {

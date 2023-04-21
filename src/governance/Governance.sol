@@ -7,11 +7,24 @@ import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.
 import {ADMIN_ROLE, MEMBER_ROLE} from "src/dao_access/Roles.sol";
 import {RoleControl} from "src/dao_access/RoleControl.sol";
 import {Implementation} from "src/common/Implementation.sol";
-
+import {LibMembers} from "src/common/LibMembers.sol";
 import {LibGovernance} from "./LibGovernance.sol";
 
 contract Governance is Implementation, RoleControl {
     using EnumerableSet for EnumerableSet.Bytes32Set;
+    using EnumerableSet for EnumerableSet.AddressSet;
+
+    uint256 internal constant MAX_THRESHOLD = 10000;
+
+    enum ProposalStatus {
+        UNKNOWN,
+        PENDING,
+        ONGOING,
+        VOTED,
+        READY,
+        CANCELLED,
+        FULFILLED
+    }
 
     function bootstrap() external onlyRole(ADMIN_ROLE) {
         LibGovernance.StandardVoteParameters storage parameters = _data()
@@ -19,7 +32,7 @@ contract Governance is Implementation, RoleControl {
 
         parameters.minVotingPeriod = 1 days;
         parameters.maxVotingPeriod = 31 days;
-        parameters.minGracePeriod = 1 days;
+        // parameters.minGracePeriod = 0;
         parameters.maxGracePeriod = 7 days;
         parameters.minThreshold = 8000; // 80%
     }
@@ -106,7 +119,7 @@ contract Governance is Implementation, RoleControl {
         if (block.timestamp > proposal.endAt + proposal.gracePeriod)
             revert LibGovernance.OutOfGracePeriod(proposalId);
 
-        proposal.canceled = true;
+        proposal.cancelled = true;
         emit LibGovernance.Amended(proposalId, msg.sender);
     }
 
@@ -122,11 +135,12 @@ contract Governance is Implementation, RoleControl {
             uint256 nbOfCalls = proposal.datas.length;
             for (uint256 i; i < nbOfCalls; ) {
                 // call on (this) = call to self
+                // need try/catch
+                // error handling??
                 (bool success, bytes memory result) = address(this).call(
                     proposal.datas[i]
                 );
 
-                // error handling??
                 if (!success) proposal.datas[i] = result; // report in datas or elsewhere?
 
                 unchecked {
@@ -140,13 +154,53 @@ contract Governance is Implementation, RoleControl {
                                               INTERNAL FUNCTIONS
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+    function _proposalStatus(
+        uint256 proposalId
+    ) internal view returns (ProposalStatus) {
+        uint256 nbOfMembers = _members().members.length();
+        LibGovernance.Proposal storage proposal = _data().proposals[proposalId];
+        uint256 timestamp = block.timestamp;
+
+        // exist?
+        if (!proposal.active) return ProposalStatus.UNKNOWN;
+
+        // cancelled?
+        if (proposal.cancelled) return ProposalStatus.CANCELLED;
+
+        // fulfilled?
+        if (proposal.proceeded) return ProposalStatus.FULFILLED;
+
+        // started?
+        if (timestamp < proposal.startAt) return ProposalStatus.PENDING;
+
+        // fully accepted (m/m => n/m?)
+        if (proposal.nbYes == nbOfMembers) return ProposalStatus.READY;
+
+        // vote period ended
+        if (timestamp < proposal.endAt) return ProposalStatus.VOTED;
+
+        // vote period ended
+        if (timestamp < proposal.endAt + proposal.gracePeriod)
+            return ProposalStatus.READY;
+
+        // so far so good
+        return ProposalStatus.ONGOING;
+    }
+
     function _voteResult(
         LibGovernance.Proposal storage proposal
     ) internal view returns (bool) {
-        return ((proposal.nbYes * 10000) / proposal.nbNo) >= proposal.threshold;
+        // extract in memory
+        return
+            ((proposal.nbYes * 10000) / proposal.nbNo + proposal.nbYes) >=
+            proposal.threshold;
     }
 
     function _data() internal pure returns (LibGovernance.Data storage) {
         return LibGovernance.accessData();
+    }
+
+    function _members() internal pure returns (LibMembers.Data storage) {
+        return LibMembers.accessData();
     }
 }
