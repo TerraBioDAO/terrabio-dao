@@ -21,9 +21,9 @@ library LibGovernance {
         uint256 membersVoted;
         // --- vote info ---
         address proposer;
-        mapping(address => bool) hasVote;
         // --- content ---
-        bytes[] datas;
+        bytes[] calls;
+        bytes[] results;
     }
 
     struct StandardVoteParameters {
@@ -36,6 +36,7 @@ library LibGovernance {
 
     struct Data {
         mapping(uint256 => Proposal) proposals;
+        mapping(uint256 => mapping(address => bool)) votes;
         uint256 lastProposalId;
         StandardVoteParameters standardVoteParameters;
     }

@@ -2,21 +2,33 @@
 
 pragma solidity ^0.8.13;
 
+import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
+
 import {Implementation} from "src/common/Implementation.sol";
-import {ADMIN_ROLE} from "src/dao_access/Roles.sol";
+import {LibMembers} from "src/common/LibMembers.sol";
+import {ADMIN_ROLE, MEMBER_ROLE} from "./Roles.sol";
 import {LibDaoAccess} from "./LibDaoAccess.sol";
 
 contract DaoAccess is Implementation {
+    using EnumerableSet for EnumerableSet.AddressSet;
+
     address private immutable _firstAdmin;
 
     modifier onlyAdminRole(bytes32 role) {
         LibDaoAccess.Data storage data = _data();
-        bytes32 adminRole = ADMIN_ROLE | data.adminRole[role];
+        bytes32 adminRole = data.adminRole[role];
         bytes32 senderRole = data.roles[msg.sender];
 
         // warning with default role 0
-        if (senderRole == 0 || senderRole & adminRole != senderRole)
-            revert LibDaoAccess.NotRoleOperator(role, adminRole);
+        if (
+            senderRole == 0 ||
+            (senderRole & adminRole != adminRole &&
+                senderRole & ADMIN_ROLE != ADMIN_ROLE)
+        )
+            revert LibDaoAccess.NotRoleOperator(
+                role,
+                adminRole == 0 ? ADMIN_ROLE : adminRole
+            );
         _;
     }
 
@@ -27,7 +39,8 @@ contract DaoAccess is Implementation {
     function bootstrap() external {
         LibDaoAccess.Data storage data = _data();
 
-        data.roles[_firstAdmin] = ADMIN_ROLE;
+        data.roles[_firstAdmin] = ADMIN_ROLE | MEMBER_ROLE;
+        LibMembers.accessData().members.add(_firstAdmin);
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////
@@ -39,6 +52,9 @@ contract DaoAccess is Implementation {
         address account
     ) external onlyAdminRole(role) {
         if (!hasRole(role, account)) {
+            if (role & MEMBER_ROLE == MEMBER_ROLE) {
+                LibMembers.accessData().members.add(account);
+            }
             _data().roles[account] |= role;
         }
     }
@@ -48,6 +64,9 @@ contract DaoAccess is Implementation {
         address account
     ) external onlyAdminRole(role) {
         if (hasRole(role, account)) {
+            if (role & MEMBER_ROLE == MEMBER_ROLE) {
+                LibMembers.accessData().members.remove(account);
+            }
             _data().roles[account] ^= role;
         }
     }

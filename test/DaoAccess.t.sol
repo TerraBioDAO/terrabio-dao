@@ -18,6 +18,7 @@ contract DaoAccess_test is Test {
     address internal constant OWNER = address(501);
     address internal constant USER = address(1);
     address internal constant VISITOR = address(2);
+    address internal constant VISITOR2 = address(3);
 
     bytes32 internal constant ROLE_3 = bytes32(uint256(2 ** 3));
     bytes32 internal constant ROLE_4 = bytes32(uint256(2 ** 4));
@@ -32,6 +33,11 @@ contract DaoAccess_test is Test {
 
         roleGated = new RoleGated();
         ROLE_GATED = address(roleGated);
+
+        vm.label(OWNER, "OWNER");
+        vm.label(USER, "USER");
+        vm.label(VISITOR, "VISITOR");
+        vm.label(VISITOR2, "VISITOR2");
     }
 
     function test_constructor_bootstrap(address addr) public {
@@ -220,6 +226,7 @@ contract DaoAccess_test is Test {
 
     function test_onlyRole_OnlyAllowedRoleAccess() public {
         test_grantRole_GrantRole(USER);
+        assertTrue(access.hasRole(ADMIN_ROLE, OWNER));
         workaround_UseAccessStorageForRoleGated();
 
         vm.prank(USER);
@@ -233,13 +240,21 @@ contract DaoAccess_test is Test {
         test_grantRole_GrantRole(USER);
         vm.prank(OWNER);
         access.grantRole(ROLE_5, VISITOR);
+        vm.prank(OWNER);
+        access.grantRole(ROLE_5 | ROLE_3, VISITOR2);
         workaround_UseAccessStorageForRoleGated();
 
         vm.prank(USER);
-        assertTrue(roleGated.gate(ROLE_3 | ROLE_5));
+        assertTrue(roleGated.gate(ROLE_3));
+        // assertTrue(roleGated.gate(ROLE_3 | ROLE_5)); not work
 
         vm.prank(VISITOR);
-        assertTrue(roleGated.gate(ROLE_3 | ROLE_5));
+        assertTrue(roleGated.gate(ROLE_5));
+        // assertTrue(roleGated.gate(ROLE_3 | ROLE_5)); not work
+
+        // work only when both role has been granted
+        vm.prank(VISITOR2);
+        assertTrue(roleGated.gate(ROLE_5 | ROLE_3));
     }
 
     function test_onlyRole_BlockUnauthorizedMembers() public {
