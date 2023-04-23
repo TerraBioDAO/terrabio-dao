@@ -124,10 +124,6 @@ contract Governance is Implementation, RoleControl {
         emit LibGovernance.Amended(proposalId, msg.sender);
     }
 
-    event ping(uint256);
-    event byt(bytes);
-    event log(address, bytes4, bytes);
-
     function execute(uint256 proposalId) external {
         LibGovernance.Proposal storage proposal = _data().proposals[proposalId];
         ProposalStatus status = _proposalStatus(proposalId);

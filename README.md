@@ -10,8 +10,8 @@ forge test -vvvv
 
 
 TODO:
-- add members in daoAccess (or eslewhere)
-- test governance (multi-sig) => proposal life cycle
+- add members in daoAccess (or eslewhere) ✅
+- test governance (multi-sig) => proposal life cycle ✅
 - schema role (only members + dao is admin)
 - documentation!
 

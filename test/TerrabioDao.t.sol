@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 
 import {ListLengthMismatch, NotImplementedError} from "src/common/Errors.sol";
 
-import {ADMIN_ROLE} from "src/dao_access/Roles.sol";
+import {ADMIN_ROLE, MEMBER_ROLE} from "src/dao_access/Roles.sol";
 
 import {LibDaoAccess} from "src/dao_access/LibDaoAccess.sol";
 import {LibFallbackRouter} from "src/fallback_router/LibFallbackRouter.sol";
@@ -16,6 +16,7 @@ import {TerrabioDao} from "src/TerrabioDao.sol";
 import {FallbackRouter} from "src/fallback_router/FallbackRouter.sol";
 import {DaoAccess} from "src/dao_access/DaoAccess.sol";
 import {DiamondLoupe, IDiamondLoupe} from "src/diamond_retrocompability/DiamondLoupe.sol";
+import {Governance} from "src/governance/Governance.sol";
 
 contract TerrabioDao_test is Test {
     // main contract address
@@ -28,6 +29,8 @@ contract TerrabioDao_test is Test {
     address internal ROUTER;
     DiamondLoupe internal diamond;
     address internal DIAMOND;
+    Governance internal gov;
+    address internal GOV;
 
     // roles
     address internal constant OWNER = address(501);
@@ -130,6 +133,102 @@ contract TerrabioDao_test is Test {
             router.getFunctionImpl(DaoAccess.getRoleAdmin.selector),
             ACCESS
         );
+    }
+
+    /*////////////////////////////////////////////////////////////////////////////////////////////////
+                                           GOVERNANCE
+    ////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+    function test_governance_DaoManagerRouterWithGovernance() public {
+        address USER1 = address(1);
+        address USER2 = address(2);
+        address USER3 = address(3);
+        address USER4 = address(4);
+
+        // deploy
+        gov = new Governance();
+        GOV = address(gov);
+
+        // config router
+        bytes4[] memory gov_selectors = new bytes4[](7);
+        gov_selectors[0] = Governance.bootstrap.selector;
+        gov_selectors[1] = Governance.vote.selector;
+        gov_selectors[2] = Governance.propose.selector;
+        gov_selectors[3] = Governance.execute.selector;
+        gov_selectors[4] = Governance.cancelProposal.selector;
+        gov_selectors[5] = Governance.getProposalStatus.selector;
+        gov_selectors[6] = Governance.getProposal.selector;
+
+        address[] memory gov_impl = new address[](7);
+        gov_impl[0] = GOV;
+        gov_impl[1] = GOV;
+        gov_impl[2] = GOV;
+        gov_impl[3] = GOV;
+        gov_impl[4] = GOV;
+        gov_impl[5] = GOV;
+        gov_impl[6] = GOV;
+
+        vm.startPrank(OWNER);
+        FallbackRouter(DAO).batchUpdateFunction(gov_selectors, gov_impl);
+
+        DaoAccess(DAO).grantRole(MEMBER_ROLE, USER1);
+        DaoAccess(DAO).grantRole(MEMBER_ROLE, USER2);
+        DaoAccess(DAO).grantRole(MEMBER_ROLE, USER3);
+        DaoAccess(DAO).grantRole(MEMBER_ROLE, USER4);
+        DaoAccess(DAO).grantRole(ADMIN_ROLE, DAO);
+        Governance(DAO).bootstrap();
+        DaoAccess(DAO).renounceRole(ADMIN_ROLE, OWNER);
+        vm.stopPrank();
+
+        // try by adding random function
+        bytes4 selector1 = 0xbad00001;
+        address impl1 = address(0xbad00001);
+        bytes4 selector2 = 0xbad00002;
+        address impl2 = address(0xbad00002);
+        bytes[] memory calls = new bytes[](2);
+        calls[0] = abi.encode(
+            DAO,
+            abi.encodeWithSignature(
+                "updateFunction(bytes4,address)",
+                selector1,
+                impl1
+            )
+        );
+        calls[1] = abi.encode(
+            DAO,
+            abi.encodeWithSignature(
+                "updateFunction(bytes4,address)",
+                selector2,
+                impl2
+            )
+        );
+
+        vm.prank(USER3);
+        uint256 proposalId = Governance(DAO).propose(
+            100,
+            2 days,
+            0,
+            10000,
+            calls
+        );
+
+        vm.warp(200);
+
+        vm.prank(OWNER);
+        Governance(DAO).vote(proposalId, 1);
+        vm.prank(USER1);
+        Governance(DAO).vote(proposalId, 1);
+        vm.prank(USER2);
+        Governance(DAO).vote(proposalId, 1);
+        vm.prank(USER3);
+        Governance(DAO).vote(proposalId, 1);
+        vm.prank(USER4);
+        Governance(DAO).vote(proposalId, 1);
+
+        Governance(DAO).execute(proposalId);
+
+        assertEq(FallbackRouter(DAO).getFunctionImpl(selector1), impl1);
+        assertEq(FallbackRouter(DAO).getFunctionImpl(selector2), impl2);
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////
