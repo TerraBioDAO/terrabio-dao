@@ -127,5 +127,6 @@ contract Governance_test is Test {
 
         // prank any
         gov.execute(proposalId);
+        assertEq(uint8(gov.getProposalStatus(proposalId)), 6);
     }
 }
