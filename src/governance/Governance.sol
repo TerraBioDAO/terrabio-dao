@@ -2,13 +2,14 @@
 
 pragma solidity ^0.8.13;
 
-import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
+import { EnumerableSet } from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
 
-import {ADMIN_ROLE, MEMBER_ROLE} from "src/dao_access/Roles.sol";
-import {RoleControl} from "src/dao_access/RoleControl.sol";
-import {Implementation} from "src/common/Implementation.sol";
-import {LibMembers} from "src/common/LibMembers.sol";
-import {LibGovernance} from "./LibGovernance.sol";
+import { ADMIN_ROLE, MEMBER_ROLE } from "src/dao_access/Roles.sol";
+import { RoleControl } from "src/dao_access/RoleControl.sol";
+import { PauseControl } from "src/pausable/PauseControl.sol";
+import { Implementation } from "src/common/Implementation.sol";
+import { LibMembers } from "src/common/LibMembers.sol";
+import { LibGovernance } from "./LibGovernance.sol";
 
 /**
  * @title Manage votes, propositions and execution in the DAO
@@ -18,7 +19,7 @@ import {LibGovernance} from "./LibGovernance.sol";
  *      - any members can create a proposal
  *      - vote descisions are `no`, `yes`, `nota`
  */
-contract Governance is Implementation, RoleControl {
+contract Governance is Implementation, RoleControl, PauseControl {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -36,8 +37,7 @@ contract Governance is Implementation, RoleControl {
 
     /// @dev set `StandardVoteParameters`, called by the DAO deployer
     function bootstrap() external onlyRole(ADMIN_ROLE) {
-        LibGovernance.StandardVoteParameters storage parameters = _data()
-            .standardVoteParameters;
+        LibGovernance.StandardVoteParameters storage parameters = _data().standardVoteParameters;
 
         parameters.minVotingPeriod = 1 days;
         parameters.maxVotingPeriod = 31 days;
@@ -60,16 +60,14 @@ contract Governance is Implementation, RoleControl {
     function vote(
         uint256 proposalId,
         uint256 descision
-    ) external onlyRole(MEMBER_ROLE) {
+    ) external onlyRole(MEMBER_ROLE) whenNotPaused {
         // read proposal status
         ProposalStatus status = _proposalStatus(proposalId);
-        if (status != ProposalStatus.ONGOING)
-            revert LibGovernance.OutOfVotingPeriod(proposalId);
+        if (status != ProposalStatus.ONGOING) revert LibGovernance.OutOfVotingPeriod(proposalId);
 
         // get storage
         LibGovernance.Proposal storage proposal = _data().proposals[proposalId];
-        mapping(uint256 => mapping(address => bool)) storage votes = _data()
-            .votes;
+        mapping(uint256 => mapping(address => bool)) storage votes = _data().votes;
 
         bool hasVote = votes[proposalId][msg.sender];
         if (hasVote) revert LibGovernance.ProposalAlreadyVoted(proposalId);
@@ -108,10 +106,9 @@ contract Governance is Implementation, RoleControl {
         uint48 gracePeriod,
         uint16 threshold,
         bytes[] memory calls
-    ) external onlyRole(MEMBER_ROLE) returns (uint256 proposalId) {
+    ) external onlyRole(MEMBER_ROLE) whenNotPaused returns (uint256 proposalId) {
         LibGovernance.Data storage data = _data();
-        LibGovernance.StandardVoteParameters memory params = data
-            .standardVoteParameters;
+        LibGovernance.StandardVoteParameters memory params = data.standardVoteParameters;
 
         // check proposition parameters
         if (
@@ -120,10 +117,8 @@ contract Governance is Implementation, RoleControl {
             votingPeriod > params.maxVotingPeriod
         ) revert LibGovernance.OutOfVotingPeriodLimit();
 
-        if (
-            gracePeriod < params.minGracePeriod ||
-            gracePeriod > params.maxGracePeriod
-        ) revert LibGovernance.OutOfGracePeriodLimit();
+        if (gracePeriod < params.minGracePeriod || gracePeriod > params.maxGracePeriod)
+            revert LibGovernance.OutOfGracePeriodLimit();
 
         if (threshold < params.minThreshold || threshold > 10000)
             revert LibGovernance.OutOfThresholdLimit();
@@ -149,7 +144,7 @@ contract Governance is Implementation, RoleControl {
      *
      * @param proposalId number of the proposal
      */
-    function cancelProposal(uint256 proposalId) external onlyRole(ADMIN_ROLE) {
+    function cancelProposal(uint256 proposalId) external onlyRole(ADMIN_ROLE) whenNotPaused {
         ProposalStatus status = _proposalStatus(proposalId);
 
         if (status == ProposalStatus.UNKNOWN) {
@@ -183,12 +178,11 @@ contract Governance is Implementation, RoleControl {
      *
      * @param proposalId number of the proposal
      */
-    function execute(uint256 proposalId) external {
+    function execute(uint256 proposalId) external whenNotPaused {
         LibGovernance.Proposal memory proposal = _data().proposals[proposalId];
         ProposalStatus status = _proposalStatus(proposalId);
 
-        if (status != ProposalStatus.READY)
-            revert LibGovernance.NotReadyToExecute(proposalId);
+        if (status != ProposalStatus.READY) revert LibGovernance.NotReadyToExecute(proposalId);
 
         if (_voteResult(proposal)) {
             uint256 nbOfCalls = proposal.calls.length;
@@ -220,16 +214,12 @@ contract Governance is Implementation, RoleControl {
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
     /// @return ProposalStatus enum of the `proposalId`
-    function getProposalStatus(
-        uint256 proposalId
-    ) external view returns (ProposalStatus) {
+    function getProposalStatus(uint256 proposalId) external view returns (ProposalStatus) {
         return _proposalStatus(proposalId);
     }
 
     /// @return Proposal struct of the `proposalId`
-    function getProposal(
-        uint256 proposalId
-    ) external view returns (LibGovernance.Proposal memory) {
+    function getProposal(uint256 proposalId) external view returns (LibGovernance.Proposal memory) {
         return _data().proposals[proposalId];
     }
 
@@ -237,9 +227,7 @@ contract Governance is Implementation, RoleControl {
                                               INTERNAL FUNCTIONS
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-    function _proposalStatus(
-        uint256 proposalId
-    ) internal view returns (ProposalStatus) {
+    function _proposalStatus(uint256 proposalId) internal view returns (ProposalStatus) {
         uint256 nbOfMembers = _members().length();
         LibGovernance.Proposal memory proposal = _data().proposals[proposalId];
         uint256 timestamp = block.timestamp;
@@ -260,8 +248,7 @@ contract Governance is Implementation, RoleControl {
         if (proposal.nbYes == nbOfMembers) return ProposalStatus.READY;
 
         // vote period ended?
-        if (timestamp > proposal.endAt + proposal.gracePeriod)
-            return ProposalStatus.READY;
+        if (timestamp > proposal.endAt + proposal.gracePeriod) return ProposalStatus.READY;
 
         // vote period ended?
         if (timestamp > proposal.endAt) return ProposalStatus.VOTED;
@@ -270,24 +257,16 @@ contract Governance is Implementation, RoleControl {
         return ProposalStatus.ONGOING;
     }
 
-    function _voteResult(
-        LibGovernance.Proposal memory proposal
-    ) internal view returns (bool) {
+    function _voteResult(LibGovernance.Proposal memory proposal) internal view returns (bool) {
         // y / y+n >= threshold
-        return
-            ((proposal.nbYes * 10000) / (proposal.nbNo + proposal.nbYes)) >=
-            proposal.threshold;
+        return ((proposal.nbYes * 10000) / (proposal.nbNo + proposal.nbYes)) >= proposal.threshold;
     }
 
     function _data() internal pure returns (LibGovernance.Data storage) {
         return LibGovernance.accessData();
     }
 
-    function _members()
-        internal
-        view
-        returns (EnumerableSet.AddressSet storage)
-    {
+    function _members() internal view returns (EnumerableSet.AddressSet storage) {
         return LibMembers.accessData().members;
     }
 }

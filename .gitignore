@@ -7,3 +7,14 @@ broadcast/
 
 # Dotenv file
 .env
+
+# Node
+node_modules
+
+# IDE
+.idea
+
+## dev modules
+package-lock.json
+
+

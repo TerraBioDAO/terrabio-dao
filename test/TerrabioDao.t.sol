@@ -4,19 +4,20 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 
-import {ListLengthMismatch, NotImplementedError} from "src/common/Errors.sol";
+import { ListLengthMismatch, NotImplementedError } from "src/common/Errors.sol";
 
-import {ADMIN_ROLE, MEMBER_ROLE} from "src/dao_access/Roles.sol";
+import { ADMIN_ROLE, MEMBER_ROLE } from "src/dao_access/Roles.sol";
 
-import {LibDaoAccess} from "src/dao_access/LibDaoAccess.sol";
-import {LibFallbackRouter} from "src/fallback_router/LibFallbackRouter.sol";
+import { LibDaoAccess } from "src/dao_access/LibDaoAccess.sol";
+import { LibFallbackRouter } from "src/fallback_router/LibFallbackRouter.sol";
 
-import {TerrabioDao} from "src/TerrabioDao.sol";
+import { TerrabioDao } from "src/TerrabioDao.sol";
 
-import {FallbackRouter} from "src/fallback_router/FallbackRouter.sol";
-import {DaoAccess} from "src/dao_access/DaoAccess.sol";
-import {DiamondLoupe, IDiamondLoupe} from "src/diamond_retrocompability/DiamondLoupe.sol";
-import {Governance} from "src/governance/Governance.sol";
+import { FallbackRouter } from "src/fallback_router/FallbackRouter.sol";
+import { DaoAccess } from "src/dao_access/DaoAccess.sol";
+import { DiamondLoupe, IDiamondLoupe } from "src/diamond_retrocompability/DiamondLoupe.sol";
+import { Governance } from "src/governance/Governance.sol";
+import { Pausable } from "src/pausable/Pausable.sol";
 
 contract TerrabioDao_test is Test {
     // main contract address
@@ -29,6 +30,8 @@ contract TerrabioDao_test is Test {
     address internal ROUTER;
     DiamondLoupe internal diamond;
     address internal DIAMOND;
+    Pausable internal pausable;
+    address internal PAUSABLE;
     Governance internal gov;
     address internal GOV;
 
@@ -46,24 +49,33 @@ contract TerrabioDao_test is Test {
         diamond = new DiamondLoupe();
         DIAMOND = address(diamond);
 
+        pausable = new Pausable();
+        PAUSABLE = address(pausable);
+
         TerrabioDao dao = new TerrabioDao(ACCESS, ROUTER);
         DAO = address(dao);
 
         // post deployment config
         // add DaoAccess methods
-        bytes4[] memory access_selectors = new bytes4[](5);
+        bytes4[] memory access_selectors = new bytes4[](8);
         access_selectors[0] = DaoAccess.hasRole.selector;
         access_selectors[1] = DaoAccess.grantRole.selector;
         access_selectors[2] = DaoAccess.revokeRole.selector;
         access_selectors[3] = DaoAccess.renounceRole.selector;
         access_selectors[4] = DaoAccess.getRoleAdmin.selector;
+        access_selectors[5] = Pausable.pause.selector;
+        access_selectors[6] = Pausable.unpause.selector;
+        access_selectors[7] = Pausable.paused.selector;
 
-        address[] memory access_impl = new address[](5);
+        address[] memory access_impl = new address[](8);
         access_impl[0] = ACCESS;
         access_impl[1] = ACCESS;
         access_impl[2] = ACCESS;
         access_impl[3] = ACCESS;
         access_impl[4] = ACCESS;
+        access_impl[5] = PAUSABLE;
+        access_impl[6] = PAUSABLE;
+        access_impl[7] = PAUSABLE;
 
         FallbackRouter(DAO).batchUpdateFunction(access_selectors, access_impl);
 
@@ -81,27 +93,12 @@ contract TerrabioDao_test is Test {
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
     function test_constructor_BootstrapRouter() public {
         FallbackRouter dao = FallbackRouter(DAO);
-        assertEq(
-            dao.getFunctionImpl(FallbackRouter.batchUpdateFunction.selector),
-            ROUTER
-        );
-        assertEq(
-            dao.getFunctionImpl(FallbackRouter.updateFunction.selector),
-            ROUTER
-        );
+        assertEq(dao.getFunctionImpl(FallbackRouter.batchUpdateFunction.selector), ROUTER);
+        assertEq(dao.getFunctionImpl(FallbackRouter.updateFunction.selector), ROUTER);
         assertEq(dao.getFunctionImpl(FallbackRouter.rollback.selector), ROUTER);
-        assertEq(
-            dao.getFunctionImpl(FallbackRouter.getFunctionImpl.selector),
-            ROUTER
-        );
-        assertEq(
-            dao.getFunctionImpl(FallbackRouter.getFunctionHistory.selector),
-            ROUTER
-        );
-        assertEq(
-            dao.getFunctionImpl(FallbackRouter.getSelectorList.selector),
-            ROUTER
-        );
+        assertEq(dao.getFunctionImpl(FallbackRouter.getFunctionImpl.selector), ROUTER);
+        assertEq(dao.getFunctionImpl(FallbackRouter.getFunctionHistory.selector), ROUTER);
+        assertEq(dao.getFunctionImpl(FallbackRouter.getSelectorList.selector), ROUTER);
     }
 
     function test_constructor_BootstrapAccess() public {
@@ -125,14 +122,17 @@ contract TerrabioDao_test is Test {
         assertEq(router.getFunctionImpl(DaoAccess.hasRole.selector), ACCESS);
         assertEq(router.getFunctionImpl(DaoAccess.grantRole.selector), ACCESS);
         assertEq(router.getFunctionImpl(DaoAccess.revokeRole.selector), ACCESS);
-        assertEq(
-            router.getFunctionImpl(DaoAccess.renounceRole.selector),
-            ACCESS
-        );
-        assertEq(
-            router.getFunctionImpl(DaoAccess.getRoleAdmin.selector),
-            ACCESS
-        );
+        assertEq(router.getFunctionImpl(DaoAccess.renounceRole.selector), ACCESS);
+        assertEq(router.getFunctionImpl(DaoAccess.getRoleAdmin.selector), ACCESS);
+    }
+
+    function test_postDeployment_Pausable() public {
+        router = FallbackRouter(DAO);
+        assertEq(router.getFunctionImpl(Pausable.paused.selector), PAUSABLE);
+        assertEq(router.getFunctionImpl(Pausable.pause.selector), PAUSABLE);
+        assertEq(router.getFunctionImpl(Pausable.unpause.selector), PAUSABLE);
+
+        assertFalse(Pausable(DAO).paused());
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////
@@ -188,29 +188,15 @@ contract TerrabioDao_test is Test {
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encode(
             DAO,
-            abi.encodeWithSignature(
-                "updateFunction(bytes4,address)",
-                selector1,
-                impl1
-            )
+            abi.encodeWithSignature("updateFunction(bytes4,address)", selector1, impl1)
         );
         calls[1] = abi.encode(
             DAO,
-            abi.encodeWithSignature(
-                "updateFunction(bytes4,address)",
-                selector2,
-                impl2
-            )
+            abi.encodeWithSignature("updateFunction(bytes4,address)", selector2, impl2)
         );
 
         vm.prank(USER3);
-        uint256 proposalId = Governance(DAO).propose(
-            100,
-            2 days,
-            0,
-            10000,
-            calls
-        );
+        uint256 proposalId = Governance(DAO).propose(100, 2 days, 0, 10000, calls);
 
         vm.warp(200);
 
@@ -230,7 +216,7 @@ contract TerrabioDao_test is Test {
         assertEq(FallbackRouter(DAO).getFunctionImpl(selector1), impl1);
         assertEq(FallbackRouter(DAO).getFunctionImpl(selector2), impl2);
 
-        assertEq(FallbackRouter(DAO).getSelectorList().length, 20);
+        assertEq(FallbackRouter(DAO).getSelectorList().length, 23);
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////
@@ -253,6 +239,6 @@ contract TerrabioDao_test is Test {
 
         DiamondLoupe.Facet[] memory facets = DiamondLoupe(DAO).facets();
 
-        assertEq(facets.length, 3);
+        assertEq(facets.length, 4);
     }
 }
