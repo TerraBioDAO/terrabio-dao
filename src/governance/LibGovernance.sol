@@ -13,6 +13,7 @@ library LibGovernance {
     error NotAnActiveProposal(uint256 proposalId);
     error OutOfVotingPeriod(uint256 proposalId);
     error OutOfGracePeriod(uint256 proposalId);
+    error OutOfCancellationPeriod(uint256 proposalId);
     error NotReadyToExecute(uint256 proposalId);
     error UnknownDescision();
     error ProposalAlreadyVoted(uint256 proposalId);
@@ -79,6 +80,7 @@ library LibGovernance {
                                         STANDARD STORAGE MODIFICATION
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+    /// @dev increment and return a proposal ID
     function claimProposalId() internal returns (uint256) {
         unchecked {
             return ++accessData().lastProposalId;

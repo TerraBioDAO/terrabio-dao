@@ -91,6 +91,7 @@ contract DiamondLoupe is IDiamondLoupe {
         uint256 length = data.selectors.length();
 
         // allocate 200 memory slots for an array
+        // correspond to the array of implementations
         uint256 impls_key = DynamicalMemoryArray.create(200);
 
         for (uint256 i; i < length; ) {
@@ -98,19 +99,17 @@ contract DiamondLoupe is IDiamondLoupe {
             bytes4 selector = bytes4(data.selectors.at(i));
             address impl = data.impls[selector];
 
-            // create key for address
+            // create key to start a new array
             // /!\ NOTE a collision can occur
             uint256 selectors_key = uint160(impl) & 0xFFFF;
 
-            // get number of selector added
-            uint256 selectorsAdded = selectors_key.length();
-
-            // check if impl is known
-            if (selectorsAdded == 0) {
+            // push a new implementation into
+            // the implementation array
+            if (selectors_key.length() == 0) {
                 impls_key.push(uint160(impl));
             }
 
-            // push selector
+            // push selector into selectors array
             selectors_key.pushAt(uint32(selector));
 
             // loop
@@ -119,14 +118,18 @@ contract DiamondLoupe is IDiamondLoupe {
             }
         }
 
-        // read memory and create facets
+        // read memory and create facets array
         uint256 nbOfImpls = impls_key.length();
         facets_ = new Facet[](nbOfImpls);
 
         for (uint256 i; i < nbOfImpls; ) {
+            // get implementation address
             address impl = address(uint160(impls_key.at(i)));
+
+            // get implementation's selector list
             uint256 selectors_key = uint160(impl) & 0xFFFF;
 
+            // create and fill selectors array
             bytes4[] memory selectors = new bytes4[](selectors_key.length());
             for (uint256 j; j < selectors_key.length(); ) {
                 selectors[j] = bytes4(uint32(selectors_key.at(j)));
@@ -135,6 +138,7 @@ contract DiamondLoupe is IDiamondLoupe {
                 }
             }
 
+            // fill Facets array
             facets_[i] = Facet({
                 facetAddress: impl,
                 functionSelectors: selectors
