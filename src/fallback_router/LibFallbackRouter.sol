@@ -7,12 +7,6 @@ import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.
 library LibFallbackRouter {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    struct Data {
-        mapping(bytes4 => address) impls;
-        mapping(bytes4 => address[]) history; // can be the last one
-        EnumerableSet.Bytes32Set selectors;
-    }
-
     /// @dev Emitted when adding, replacing or removing functions selector
     event FunctionUpdated(
         bytes4 indexed selector,
@@ -22,6 +16,20 @@ library LibFallbackRouter {
 
     /// @dev Error for inexistant selector
     error NotImplemented(bytes4 selector);
+
+    /*////////////////////////////////////////////////////////////////////////////////////////////////
+                                                LAYOUT
+    ////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+    struct Data {
+        mapping(bytes4 => address) impls;
+        mapping(bytes4 => address[]) history; // can be the last one
+        EnumerableSet.Bytes32Set selectors;
+    }
+
+    /*////////////////////////////////////////////////////////////////////////////////////////////////
+                                            STORAGE LOCATION
+    ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
     /// @dev Storage slot for Data struct
     bytes32 internal constant STORAGE_SLOT =

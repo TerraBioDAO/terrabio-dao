@@ -8,6 +8,12 @@ import {DynamicalMemoryArray} from "dynamic-memory-arrays/DynamicalMemoryArray.s
 import "src/fallback_router/LibFallbackRouter.sol";
 import "./IDiamondLoupe.sol";
 
+/**
+ * @notice View functions to satisfy the interface {IDiamondLoupe} with
+ * the current DAO storage system.
+ * @dev This contract use an hand made library to create dynamical memory arrays,
+ * see {_createFacets}
+ */
 contract DiamondLoupe is IDiamondLoupe {
     using DynamicalMemoryArray for uint256;
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -22,11 +28,9 @@ contract DiamondLoupe is IDiamondLoupe {
     /// @notice Gets all the function selectors provided by a facet.
     /// @param _facet The facet address.
     /// @return facetFunctionSelectors_
-    function facetFunctionSelectors(address _facet)
-        external
-        view
-        returns (bytes4[] memory facetFunctionSelectors_)
-    {
+    function facetFunctionSelectors(
+        address _facet
+    ) external view returns (bytes4[] memory facetFunctionSelectors_) {
         LibFallbackRouter.Data storage data = LibFallbackRouter.accessData();
         Facet[] memory facets_ = _createFacets(data);
         for (uint256 i; i < facets_.length; ) {
@@ -52,50 +56,50 @@ contract DiamondLoupe is IDiamondLoupe {
     /// @dev If facet is not found return address(0).
     /// @param _functionSelector The function selector.
     /// @return facetAddress_ The facet address.
-    function facetAddress(bytes4 _functionSelector)
-        external
-        view
-        returns (address facetAddress_)
-    {
+    function facetAddress(
+        bytes4 _functionSelector
+    ) external view returns (address facetAddress_) {
         return LibFallbackRouter.accessData().impls[_functionSelector];
     }
 
-    function createRandomArrays(uint256 seed)
-        external
-        pure
-        returns (uint256[] memory hashes, bytes4[] memory hashesIds)
-    {
-        uint256 randomLength = uint256(keccak256(abi.encode(seed))) % 10;
-        uint256 hashedArray = DynamicalMemoryArray.create(10);
-        uint256 hashedIdsArray = DynamicalMemoryArray.create(10);
+    // illustration of the `DynamicalMemoryArray` library
+    // function createRandomArrays(uint256 seed)
+    //     external
+    //     pure
+    //     returns (uint256[] memory hashes, bytes4[] memory hashesIds)
+    // {
+    //     uint256 randomLength = uint256(keccak256(abi.encode(seed))) % 10;
+    //     uint256 hashedArray = DynamicalMemoryArray.create(10);
+    //     uint256 hashedIdsArray = DynamicalMemoryArray.create(10);
 
-        for (uint256 i; i <= randomLength; i++) {
-            hashedArray.push(randomLength + i);
-            hashedIdsArray.push(uint32(uint256(keccak256(abi.encode(i)))));
-        }
+    //     for (uint256 i; i <= randomLength; i++) {
+    //         hashedArray.push(randomLength + i);
+    //         hashedIdsArray.push(uint32(uint256(keccak256(abi.encode(i)))));
+    //     }
 
-        hashes = hashedArray.toArray();
-        hashesIds = new bytes4[](hashedIdsArray.length());
+    //     hashes = hashedArray.toArray();
+    //     hashesIds = new bytes4[](hashedIdsArray.length());
 
-        for (uint256 i; i < hashedIdsArray.length(); i++) {
-            hashesIds[i] = bytes4(uint32(hashedIdsArray.at(i)));
-        }
-    }
+    //     for (uint256 i; i < hashedIdsArray.length(); i++) {
+    //         hashesIds[i] = bytes4(uint32(hashedIdsArray.at(i)));
+    //     }
+    // }
 
-    function _createFacets(LibFallbackRouter.Data storage data)
-        internal
-        view
-        returns (Facet[] memory facets_)
-    {
+    function _createFacets(
+        LibFallbackRouter.Data storage data
+    ) internal view returns (Facet[] memory facets_) {
         uint256 length = data.selectors.length();
+
+        // allocate 200 memory slots for an array
         uint256 impls_key = DynamicalMemoryArray.create(200);
 
         for (uint256 i; i < length; ) {
-            // read addr impl
+            // read implementation address
             bytes4 selector = bytes4(data.selectors.at(i));
             address impl = data.impls[selector];
 
             // create key for address
+            // /!\ NOTE a collision can occur
             uint256 selectors_key = uint160(impl) & 0xFFFF;
 
             // get number of selector added

@@ -4,6 +4,14 @@ pragma solidity ^0.8.13;
 
 import {LibFallbackRouter} from "./fallback_router/LibFallbackRouter.sol";
 
+/**
+ * @title Unique storage contract for the DAO system
+ * @dev This contract contains only the execution logic for addressing the
+ * contract implementation associated with the `calldata`'s selector.
+ * This contract is a simplified version of `TerrabioDao` to illustrate
+ * how this contract work. This contract will not be used in the DAO system.
+ */
+
 contract TerrabioDao {
     constructor(address daoAccess, address fallbackRouter) {
         (bool success, ) = daoAccess.delegatecall(

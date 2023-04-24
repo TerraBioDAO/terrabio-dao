@@ -2,14 +2,15 @@
 
 pragma solidity ^0.8.13;
 
-library LibDaoAccess {
-    struct Data {
-        mapping(address => bytes32) roles;
-        mapping(bytes32 => bytes32) adminRole;
-    }
+/**
+ * @title Library for events, errors, data layout and storage location
+ * related to `DaoAccess`
+ * @dev Give more details about Libs
+ */
 
+library LibDaoAccess {
     /// @dev Emitted when adding, replacing or removing role for an account
-    event RolesUpdated(
+    event RoleUpdated(
         address indexed account,
         bytes32 indexed fromRoles,
         bytes32 indexed toRoles
@@ -26,6 +27,19 @@ library LibDaoAccess {
     error NotSelfRenouncement();
     error NotRoleOperator(bytes32 role, bytes32 operator);
     error MissingRole(address caller, bytes32 role);
+
+    /*////////////////////////////////////////////////////////////////////////////////////////////////
+                                                LAYOUT
+    ////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+    struct Data {
+        mapping(address => bytes32) roles;
+        mapping(bytes32 => bytes32) adminRole;
+    }
+
+    /*////////////////////////////////////////////////////////////////////////////////////////////////
+                                            STORAGE LOCATION
+    ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
     /// @dev Storage slot for Data struct
     bytes32 internal constant STORAGE_SLOT =

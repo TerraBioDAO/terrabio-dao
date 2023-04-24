@@ -4,13 +4,22 @@ pragma solidity ^0.8.13;
 
 import {LibFallbackRouter} from "./fallback_router/LibFallbackRouter.sol";
 
+/**
+ * @title Unique storage contract for the DAO system
+ * @dev This contract contains only the execution logic for addressing the
+ * contract implementation associated with the `calldata`'s selector. This logic
+ * is written in Yul for optimization, the code is taken from `0xProject`:
+ * https://github.com/0xProject/protocol/blob/development/contracts/zero-ex/contracts/src/ZeroExOptimized.sol
+ */
 contract TerrabioDao {
     constructor(address daoAccess, address fallbackRouter) {
+        // bootstrap `DaoAccess` storage
         (bool success, ) = daoAccess.delegatecall(
             abi.encodeWithSignature("bootstrap()")
         );
         if (!success) revert("DaoAccess: Incorrect bootstrap");
 
+        // bootstrap `FallbackRouter` bootstrap
         (success, ) = fallbackRouter.delegatecall(
             abi.encodeWithSignature("bootstrap()")
         );

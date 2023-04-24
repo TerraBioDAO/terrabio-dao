@@ -10,9 +10,19 @@ import {ADMIN_ROLE} from "src/dao_access/Roles.sol";
 import {RoleControl} from "src/dao_access/RoleControl.sol";
 import {LibFallbackRouter} from "./LibFallbackRouter.sol";
 
+/**
+ * @title Implementation for routing calls made on the main contract.
+ * @dev All write functions are restricted to the ADMIN_ROLE for securities reasons.
+ * NOTE selectors collisions are not considered in the smart contract, users should be aware
+ * before updating a function.
+ */
 contract FallbackRouter is Implementation, RoleControl {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
+    /**
+     * @dev permissionless function as delegatecall from the
+     * DAO is not authorized (only in constructor)
+     */
     function bootstrap() external {
         LibFallbackRouter.Data storage data = _data();
 
@@ -28,6 +38,11 @@ contract FallbackRouter is Implementation, RoleControl {
                                               EXTERNAL FUNCTIONS
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Batch functions update
+     * @param selectors array of selectors to update
+     * @param impls array of addresses corresponding to the `selectors` array
+     */
     function batchUpdateFunction(
         bytes4[] memory selectors,
         address[] memory impls
@@ -43,13 +58,25 @@ contract FallbackRouter is Implementation, RoleControl {
         }
     }
 
-    function updateFunction(bytes4 selector, address impl)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
+    /**
+     * @notice Update a function
+     * @param selector the selector to update
+     * @param impl implementation address
+     */
+    function updateFunction(
+        bytes4 selector,
+        address impl
+    ) external onlyRole(ADMIN_ROLE) {
         _updateFunction(selector, impl, _data());
     }
 
+    /**
+     * @notice Update a function to its previous implementation
+     * @dev can only rollback to the previous implementation, it cannot
+     * go further in the history.
+     *
+     * @param selector function's selector to rollback
+     */
     function rollback(bytes4 selector) external onlyRole(ADMIN_ROLE) {
         LibFallbackRouter.Data storage data = _data();
         address currentImpl = data.impls[selector];
@@ -70,18 +97,19 @@ contract FallbackRouter is Implementation, RoleControl {
                                                   GETTERS
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+    /// @return address implementing the function's `selector`
     function getFunctionImpl(bytes4 selector) external view returns (address) {
         return _data().impls[selector];
     }
 
-    function getFunctionHistory(bytes4 selector)
-        external
-        view
-        returns (address[] memory)
-    {
+    /// @return array of implementation address for the `selector`
+    function getFunctionHistory(
+        bytes4 selector
+    ) external view returns (address[] memory) {
         return _data().history[selector];
     }
 
+    /// @return list of selector callable in the DAO system
     function getSelectorList()
         external
         view
@@ -109,6 +137,8 @@ contract FallbackRouter is Implementation, RoleControl {
 
         if (oldImpl != address(0)) data.history[selector].push(oldImpl);
         data.impls[selector] = impl;
+
+        // update the selector list
         impl == address(0)
             ? data.selectors.remove(selector)
             : data.selectors.add(selector);

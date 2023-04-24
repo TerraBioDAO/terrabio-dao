@@ -3,6 +3,31 @@
 pragma solidity ^0.8.13;
 
 library LibGovernance {
+    event Voted(uint256 indexed proposalId, address indexed voter);
+    event Proposed(uint256 indexed proposalId, address indexed proposer);
+    event Amended(uint256 proposalId, address indexed operator);
+
+    error OutOfVotingPeriodLimit();
+    error OutOfGracePeriodLimit();
+    error OutOfThresholdLimit();
+    error NotAnActiveProposal(uint256 proposalId);
+    error OutOfVotingPeriod(uint256 proposalId);
+    error OutOfGracePeriod(uint256 proposalId);
+    error NotReadyToExecute(uint256 proposalId);
+    error UnknownDescision();
+    error ProposalAlreadyVoted(uint256 proposalId);
+
+    /*////////////////////////////////////////////////////////////////////////////////////////////////
+                                                LAYOUT
+    ////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+    struct Data {
+        mapping(uint256 => Proposal) proposals;
+        mapping(uint256 => mapping(address => bool)) votes;
+        uint256 lastProposalId;
+        StandardVoteParameters standardVoteParameters;
+    }
+
     struct Proposal {
         // --- status ---
         bool active;
@@ -34,26 +59,9 @@ library LibGovernance {
         uint16 minThreshold;
     }
 
-    struct Data {
-        mapping(uint256 => Proposal) proposals;
-        mapping(uint256 => mapping(address => bool)) votes;
-        uint256 lastProposalId;
-        StandardVoteParameters standardVoteParameters;
-    }
-
-    event Voted(uint256 indexed proposalId, address indexed voter);
-    event Proposed(uint256 indexed proposalId, address indexed proposer);
-    event Amended(uint256 proposalId, address indexed operator);
-
-    error OutOfVotingPeriodLimit();
-    error OutOfGracePeriodLimit();
-    error OutOfThresholdLimit();
-    error NotAnActiveProposal(uint256 proposalId);
-    error OutOfVotingPeriod(uint256 proposalId);
-    error OutOfGracePeriod(uint256 proposalId);
-    error NotReadyToExecute(uint256 proposalId);
-    error UnknownDescision();
-    error ProposalAlreadyVoted(uint256 proposalId);
+    /*////////////////////////////////////////////////////////////////////////////////////////////////
+                                            STORAGE LOCATION
+    ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
     /// @dev Storage slot for Data struct
     bytes32 internal constant STORAGE_SLOT =
@@ -66,6 +74,10 @@ library LibGovernance {
             data.slot := slot
         }
     }
+
+    /*////////////////////////////////////////////////////////////////////////////////////////////////
+                                        STANDARD STORAGE MODIFICATION
+    ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
     function claimProposalId() internal returns (uint256) {
         unchecked {
