@@ -2,15 +2,17 @@
 
 pragma solidity ^0.8.13;
 
-import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
+import { EnumerableSet } from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
 
-import {ADMIN_ROLE, MEMBER_ROLE} from "src/dao_access/Roles.sol";
-import {RoleControl} from "src/dao_access/RoleControl.sol";
-import {Implementation} from "src/common/Implementation.sol";
-import {LibMembers} from "src/common/LibMembers.sol";
-import {LibGovernance} from "./LibGovernance.sol";
+import { ADMIN_ROLE, MEMBER_ROLE } from "src/dao_access/Roles.sol";
+import { RoleControl } from "src/dao_access/RoleControl.sol";
+import { PauseControl } from "src/pausable/PauseControl.sol";
+import { Implementation } from "src/common/Implementation.sol";
+import { LibMembers } from "src/common/LibMembers.sol";
+import { LibGovernance } from "./LibGovernance.sol";
+import "..\pausable\PauseControl.sol";
 
-contract Governance is Implementation, RoleControl {
+contract Governance is Implementation, RoleControl, PauseControl {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -26,9 +28,8 @@ contract Governance is Implementation, RoleControl {
         FULFILLED
     }
 
-    function bootstrap() external onlyRole(ADMIN_ROLE) {
-        LibGovernance.StandardVoteParameters storage parameters = _data()
-            .standardVoteParameters;
+    function bootstrap() external onlyRole(ADMIN_ROLE) whenPaused {
+        LibGovernance.StandardVoteParameters storage parameters = _data().standardVoteParameters;
 
         parameters.minVotingPeriod = 1 days;
         parameters.maxVotingPeriod = 31 days;
@@ -44,15 +45,13 @@ contract Governance is Implementation, RoleControl {
     function vote(
         uint256 proposalId,
         uint256 descision
-    ) external onlyRole(MEMBER_ROLE) {
+    ) external onlyRole(MEMBER_ROLE) whenNotPaused {
         LibGovernance.Proposal storage proposal = _data().proposals[proposalId];
         ProposalStatus status = _proposalStatus(proposalId);
 
-        if (status != ProposalStatus.ONGOING)
-            revert LibGovernance.OutOfVotingPeriod(proposalId);
+        if (status != ProposalStatus.ONGOING) revert LibGovernance.OutOfVotingPeriod(proposalId);
 
-        mapping(uint256 => mapping(address => bool)) storage votes = _data()
-            .votes;
+        mapping(uint256 => mapping(address => bool)) storage votes = _data().votes;
 
         bool hasVote = votes[proposalId][msg.sender]; //proposal.hasVote[msg.sender];
         if (hasVote) revert LibGovernance.ProposalAlreadyVoted(proposalId);
@@ -78,7 +77,7 @@ contract Governance is Implementation, RoleControl {
         uint48 gracePeriod,
         uint16 threshold,
         bytes[] memory calls
-    ) external onlyRole(MEMBER_ROLE) returns (uint256 proposalId) {
+    ) external onlyRole(MEMBER_ROLE) whenNotPaused returns (uint256 proposalId) {
         LibGovernance.Data storage data = _data();
 
         // check proposition parameters
@@ -93,10 +92,8 @@ contract Governance is Implementation, RoleControl {
             gracePeriod > data.standardVoteParameters.maxGracePeriod
         ) revert LibGovernance.OutOfGracePeriodLimit();
 
-        if (
-            threshold < data.standardVoteParameters.minThreshold ||
-            threshold > 10000
-        ) revert LibGovernance.OutOfThresholdLimit();
+        if (threshold < data.standardVoteParameters.minThreshold || threshold > 10000)
+            revert LibGovernance.OutOfThresholdLimit();
 
         // store proposition
         proposalId = LibGovernance.claimProposalId();
@@ -112,10 +109,9 @@ contract Governance is Implementation, RoleControl {
         emit LibGovernance.Proposed(proposalId, msg.sender);
     }
 
-    function cancelProposal(uint256 proposalId) external onlyRole(ADMIN_ROLE) {
+    function cancelProposal(uint256 proposalId) external onlyRole(ADMIN_ROLE) whenNotPaused {
         LibGovernance.Proposal storage proposal = _data().proposals[proposalId];
-        if (!proposal.active)
-            revert LibGovernance.NotAnActiveProposal(proposalId);
+        if (!proposal.active) revert LibGovernance.NotAnActiveProposal(proposalId);
 
         if (block.timestamp > proposal.endAt + proposal.gracePeriod)
             revert LibGovernance.OutOfGracePeriod(proposalId);
@@ -124,12 +120,11 @@ contract Governance is Implementation, RoleControl {
         emit LibGovernance.Amended(proposalId, msg.sender);
     }
 
-    function execute(uint256 proposalId) external {
+    function execute(uint256 proposalId) external whenNotPaused {
         LibGovernance.Proposal storage proposal = _data().proposals[proposalId];
         ProposalStatus status = _proposalStatus(proposalId);
 
-        if (status != ProposalStatus.READY)
-            revert LibGovernance.NotReadyToExecute(proposalId);
+        if (status != ProposalStatus.READY) revert LibGovernance.NotReadyToExecute(proposalId);
 
         if (_voteResult(proposal)) {
             uint256 nbOfCalls = proposal.calls.length;
@@ -162,15 +157,11 @@ contract Governance is Implementation, RoleControl {
                                                 GETTERS
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-    function getProposalStatus(
-        uint256 proposalId
-    ) external view returns (ProposalStatus) {
+    function getProposalStatus(uint256 proposalId) external view returns (ProposalStatus) {
         return _proposalStatus(proposalId);
     }
 
-    function getProposal(
-        uint256 proposalId
-    ) external view returns (LibGovernance.Proposal memory) {
+    function getProposal(uint256 proposalId) external view returns (LibGovernance.Proposal memory) {
         return _data().proposals[proposalId];
     }
 
@@ -178,9 +169,7 @@ contract Governance is Implementation, RoleControl {
                                               INTERNAL FUNCTIONS
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-    function _proposalStatus(
-        uint256 proposalId
-    ) internal view returns (ProposalStatus) {
+    function _proposalStatus(uint256 proposalId) internal view returns (ProposalStatus) {
         uint256 nbOfMembers = _members().members.length();
         LibGovernance.Proposal storage proposal = _data().proposals[proposalId];
         uint256 timestamp = block.timestamp;
@@ -201,8 +190,7 @@ contract Governance is Implementation, RoleControl {
         if (proposal.nbYes == nbOfMembers) return ProposalStatus.READY;
 
         // vote period ended
-        if (timestamp > proposal.endAt + proposal.gracePeriod)
-            return ProposalStatus.READY;
+        if (timestamp > proposal.endAt + proposal.gracePeriod) return ProposalStatus.READY;
 
         // vote period ended
         if (timestamp > proposal.endAt) return ProposalStatus.VOTED;
@@ -211,13 +199,9 @@ contract Governance is Implementation, RoleControl {
         return ProposalStatus.ONGOING;
     }
 
-    function _voteResult(
-        LibGovernance.Proposal storage proposal
-    ) internal view returns (bool) {
+    function _voteResult(LibGovernance.Proposal storage proposal) internal view returns (bool) {
         // extract in memory
-        return
-            ((proposal.nbYes * 10000) / (proposal.nbNo + proposal.nbYes)) >=
-            proposal.threshold;
+        return ((proposal.nbYes * 10000) / (proposal.nbNo + proposal.nbYes)) >= proposal.threshold;
     }
 
     function _data() internal pure returns (LibGovernance.Data storage) {
