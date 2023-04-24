@@ -4,6 +4,8 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
 
+import {MEMBER_ROLE, ADMIN_ROLE} from "src/dao_access/Roles.sol";
+
 import {TerrabioDao} from "src/TerrabioDao.sol";
 import {DaoAccess} from "src/dao_access/DaoAccess.sol";
 import {FallbackRouter} from "src/fallback_router/FallbackRouter.sol";
@@ -70,6 +72,27 @@ contract deploy is Script {
             Governance.bootstrap.selector,
             address(0)
         );
+
+        // init roles in the DAO
+        // anvil(0) = OWNER | DEPLOYER
+        DaoAccess(DAO).grantRole(
+            MEMBER_ROLE,
+            0x70997970C51812dc3A010C7d01b50e0d17dc79C8 // anvil(1)
+        );
+        DaoAccess(DAO).grantRole(
+            MEMBER_ROLE,
+            0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC // anvil(2)
+        );
+        DaoAccess(DAO).grantRole(
+            MEMBER_ROLE,
+            0x90F79bf6EB2c4f870365E785982E1f101E93b906 // anvil(3)
+        );
+
+        // Assing DAO as ADMIN
+        DaoAccess(DAO).grantRole(ADMIN_ROLE, DAO);
+
+        // DEPLOYER renounce his ADMIN_ROLE
+        DaoAccess(DAO).renounceRole(ADMIN_ROLE, DEPLOYER);
 
         vm.stopBroadcast();
     }

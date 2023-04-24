@@ -109,19 +109,18 @@ contract FallbackRouter is Implementation, RoleControl {
         return _data().history[selector];
     }
 
-    /// @return selectors list of selector callable in the DAO system
-    function getSelectorList()
-        external
-        view
-        returns (bytes4[] memory selectors)
-    {
+    /// @return list of selector callable in the DAO system
+    function getSelectorList() external view returns (bytes4[] memory) {
         bytes32[] memory rawSelectors = _data().selectors.values();
+        bytes4[] memory selectors = new bytes4[](rawSelectors.length);
         for (uint256 i; i < rawSelectors.length; ) {
             selectors[i] = bytes4(rawSelectors[i]);
             unchecked {
                 ++i;
             }
         }
+
+        return selectors;
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////

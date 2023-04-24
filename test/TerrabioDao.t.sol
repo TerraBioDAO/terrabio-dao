@@ -229,6 +229,8 @@ contract TerrabioDao_test is Test {
 
         assertEq(FallbackRouter(DAO).getFunctionImpl(selector1), impl1);
         assertEq(FallbackRouter(DAO).getFunctionImpl(selector2), impl2);
+
+        assertEq(FallbackRouter(DAO).getSelectorList().length, 20);
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////
