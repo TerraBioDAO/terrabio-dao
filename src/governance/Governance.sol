@@ -111,6 +111,7 @@ contract Governance is Implementation, RoleControl, PauseControl {
         LibGovernance.StandardVoteParameters memory params = data.standardVoteParameters;
 
         // check proposition parameters
+        if (startAt == 0) startAt = uint48(block.timestamp);
         if (
             startAt < block.timestamp ||
             votingPeriod < params.minVotingPeriod ||
@@ -195,7 +196,7 @@ contract Governance is Implementation, RoleControl, PauseControl {
                 );
 
                 // need try/catch + error handling
-                (bool success, bytes memory result) = target.call(callData);
+                (, bytes memory result) = target.call(callData);
 
                 // everything is reported in `results`
                 results[i] = result;
@@ -257,7 +258,7 @@ contract Governance is Implementation, RoleControl, PauseControl {
         return ProposalStatus.ONGOING;
     }
 
-    function _voteResult(LibGovernance.Proposal memory proposal) internal view returns (bool) {
+    function _voteResult(LibGovernance.Proposal memory proposal) internal pure returns (bool) {
         // y / y+n >= threshold
         return ((proposal.nbYes * 10000) / (proposal.nbNo + proposal.nbYes)) >= proposal.threshold;
     }

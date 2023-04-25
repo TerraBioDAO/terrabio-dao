@@ -58,6 +58,7 @@ contract DaoAccess is Implementation {
 
         data.roles[_firstAdmin] = ADMIN_ROLE | MEMBER_ROLE;
         LibMembers.accessData().members.add(_firstAdmin);
+        emit LibMembers.MembersUpdated(_firstAdmin, true);
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////
@@ -80,6 +81,7 @@ contract DaoAccess is Implementation {
         if (!hasRole(role, account)) {
             if (role & MEMBER_ROLE == MEMBER_ROLE) {
                 LibMembers.accessData().members.add(account);
+                emit LibMembers.MembersUpdated(account, true);
             }
             // increment role and store the old value in memory
             bytes32 oldRoles = (_data().roles[account] |= role) ^ role;
@@ -103,6 +105,7 @@ contract DaoAccess is Implementation {
         if (hasRole(role, account)) {
             if (role & MEMBER_ROLE == MEMBER_ROLE) {
                 LibMembers.accessData().members.remove(account);
+                emit LibMembers.MembersUpdated(account, false);
             }
             // decrement role and store the old value in memory
             bytes32 oldRoles = (_data().roles[account] ^= role) | role;
@@ -121,6 +124,10 @@ contract DaoAccess is Implementation {
      */
     function renounceRole(bytes32 role, address account) external {
         if (account != msg.sender) revert LibDaoAccess.NotSelfRenouncement();
+        if (role & MEMBER_ROLE == MEMBER_ROLE) {
+            LibMembers.accessData().members.remove(account);
+            emit LibMembers.MembersUpdated(account, false);
+        }
         bytes32 oldRoles = (_data().roles[account] ^= role) | role;
         emit LibDaoAccess.RoleUpdated(account, oldRoles, oldRoles ^ role);
     }

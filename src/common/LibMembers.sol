@@ -7,6 +7,8 @@ import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.
 library LibMembers {
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    event MembersUpdated(address indexed account, bool indexed isEntry);
+
     /*////////////////////////////////////////////////////////////////////////////////////////////////
                                                 LAYOUT
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
