@@ -13,7 +13,7 @@ abstract contract PauseControl {
      * - The contract must not be paused.
      */
     modifier whenNotPaused() {
-        if (LibPausable.accessData().paused) revert LibPausable.Paused();
+        if (LibPausable.accessData().paused) revert LibPausable.AlreadyPaused();
         _;
     }
 

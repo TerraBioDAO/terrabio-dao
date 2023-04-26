@@ -2,41 +2,51 @@
 
 pragma solidity ^0.8.13;
 
-import { Pausable as OZPausable } from "openzeppelin-contracts/security/Pausable.sol";
-
-import { ADMIN_ROLE } from "src/dao_access/Roles.sol";
-import { RoleControl } from "src/dao_access/RoleControl.sol";
 import { Implementation } from "src/common/Implementation.sol";
+import { RoleControl } from "src/dao_access/RoleControl.sol";
+import { PauseControl } from "./PauseControl.sol";
+
 import { LibPausable } from "./LibPausable.sol";
+import { ADMIN_ROLE } from "src/dao_access/Roles.sol";
 
 /**
- * @title Implementation for Pausable in the DAO.
- * @dev This contract is an implementation of OZ Pausable
+ * Security module
+ * @title To stop the DAO at any moment.
  */
-contract Pausable is OZPausable, Implementation, RoleControl {
+contract Pausable is Implementation, RoleControl, PauseControl {
     /*////////////////////////////////////////////////////////////////////////////////////////////////
                                               EXTERNAL FUNCTIONS
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
-    function pause() external onlyRole(ADMIN_ROLE) {
-        _pause();
-    }
-
-    function unpause() external onlyRole(ADMIN_ROLE) {
-        _unpause();
-    }
-
-    function paused() public view override returns (bool) {
-        return _data().paused;
-    }
-
-    function _pause() internal override whenNotPaused {
+    /**
+     * Pause DAO
+     *
+     * Requirements:
+     * - Caller must have Admin role
+     * - The contract must not be paused.
+     */
+    function pause() external onlyRole(ADMIN_ROLE) whenNotPaused {
         _data().paused = true;
-        emit Paused(_msgSender());
+        emit LibPausable.Paused(msg.sender);
     }
 
-    function _unpause() internal override whenPaused {
+    /**
+     * Unpause DAO
+     *
+     * Requirements:
+     * - Caller must have Admin role
+     * - The contract must be paused.
+     */
+    function unpause() external onlyRole(ADMIN_ROLE) whenPaused {
         _data().paused = false;
-        emit Unpaused(_msgSender());
+        emit LibPausable.Unpaused(msg.sender);
+    }
+
+    /**
+     * Returns paused state.
+     * @dev Returns true if the contract is paused, and false otherwise.
+     */
+    function paused() public view returns (bool) {
+        return _data().paused;
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////
