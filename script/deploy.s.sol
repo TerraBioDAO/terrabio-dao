@@ -4,12 +4,12 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
 
-import {MEMBER_ROLE, ADMIN_ROLE} from "src/dao_access/Roles.sol";
+import { MEMBER_ROLE, ADMIN_ROLE } from "src/dao_access/Roles.sol";
 
-import {TerrabioDao} from "src/TerrabioDao.sol";
-import {DaoAccess} from "src/dao_access/DaoAccess.sol";
-import {FallbackRouter} from "src/fallback_router/FallbackRouter.sol";
-import {Governance} from "src/governance/Governance.sol";
+import { TerrabioDao } from "src/TerrabioDao.sol";
+import { DaoAccess } from "src/dao_access/DaoAccess.sol";
+import { FallbackRouter } from "src/fallback_router/FallbackRouter.sol";
+import { Governance } from "src/governance/Governance.sol";
 
 contract deploy is Script {
     address internal DEPLOYER;
@@ -68,10 +68,7 @@ contract deploy is Script {
 
         // init Governance storage and remove "bootstrap()"
         Governance(DAO).bootstrap();
-        FallbackRouter(DAO).updateFunction(
-            Governance.bootstrap.selector,
-            address(0)
-        );
+        FallbackRouter(DAO).updateFunction(Governance.bootstrap.selector, address(0));
 
         // init roles in the DAO
         // anvil(0) = OWNER | DEPLOYER
@@ -79,20 +76,37 @@ contract deploy is Script {
             MEMBER_ROLE,
             0x70997970C51812dc3A010C7d01b50e0d17dc79C8 // anvil(1)
         );
-        DaoAccess(DAO).grantRole(
-            MEMBER_ROLE,
-            0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC // anvil(2)
-        );
-        DaoAccess(DAO).grantRole(
-            MEMBER_ROLE,
-            0x90F79bf6EB2c4f870365E785982E1f101E93b906 // anvil(3)
-        );
+        // DaoAccess(DAO).grantRole(
+        //     MEMBER_ROLE,
+        //     0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC // anvil(2)
+        // );
+        // DaoAccess(DAO).grantRole(
+        //     MEMBER_ROLE,
+        //     0x90F79bf6EB2c4f870365E785982E1f101E93b906 // anvil(3)
+        // );
 
         // Assing DAO as ADMIN
         DaoAccess(DAO).grantRole(ADMIN_ROLE, DAO);
 
         // DEPLOYER renounce his ADMIN_ROLE
         DaoAccess(DAO).renounceRole(ADMIN_ROLE, DEPLOYER);
+
+        // create proposal
+        bytes[] memory calls = new bytes[](1);
+        calls[0] = abi.encode(
+            DAO,
+            abi.encodeWithSignature(
+                "grantRole(bytes32,address)",
+                MEMBER_ROLE,
+                0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC // anvil(3)
+            )
+        );
+
+        Governance(DAO).propose(0, 2 days, 0 days, 8000, calls);
+        Governance(DAO).propose(0, 2 days, 0 days, 8000, new bytes[](0));
+
+        // vote
+        Governance(DAO).vote(1, 1);
 
         vm.stopBroadcast();
     }
