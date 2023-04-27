@@ -9,7 +9,17 @@ pragma solidity ^0.8.13;
  */
 
 library LibPausable {
-    error Paused();
+    /**
+     * @dev Emitted when the pause is triggered by `account`.
+     */
+    event Paused(address indexed account);
+
+    /**
+     * @dev Emitted when the pause is lifted by `account`.
+     */
+    event Unpaused(address indexed account);
+
+    error AlreadyPaused();
     error NotPaused();
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////
