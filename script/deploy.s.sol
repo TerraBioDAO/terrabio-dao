@@ -34,7 +34,7 @@ contract deploy is Script {
         DAO = address(dao);
 
         // Add new functions (DaoAccess + Governance)
-        bytes4[] memory selectors = new bytes4[](12);
+        bytes4[] memory selectors = new bytes4[](13);
         selectors[0] = DaoAccess.hasRole.selector;
         selectors[1] = DaoAccess.grantRole.selector;
         selectors[2] = DaoAccess.revokeRole.selector;
@@ -48,8 +48,9 @@ contract deploy is Script {
         selectors[9] = Governance.cancelProposal.selector;
         selectors[10] = Governance.getProposalStatus.selector;
         selectors[11] = Governance.getProposal.selector;
+        selectors[12] = Governance.getAllProposals.selector;
 
-        address[] memory impls = new address[](12);
+        address[] memory impls = new address[](13);
         impls[0] = address(access);
         impls[1] = address(access);
         impls[2] = address(access);
@@ -63,6 +64,7 @@ contract deploy is Script {
         impls[9] = address(gov);
         impls[10] = address(gov);
         impls[11] = address(gov);
+        impls[12] = address(gov);
 
         FallbackRouter(DAO).batchUpdateFunction(selectors, impls);
 

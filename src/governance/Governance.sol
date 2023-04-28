@@ -224,6 +224,17 @@ contract Governance is Implementation, RoleControl, PauseControl {
         return _data().proposals[proposalId];
     }
 
+    /// @return Array of Proposal struct
+    function getAllProposals() external view returns (LibGovernance.Proposal[] memory) {
+        LibGovernance.Proposal[] memory arr = new LibGovernance.Proposal[](_data().lastProposalId);
+
+        for (uint256 i = 0; i < _data().lastProposalId; i++) {
+            arr[i] = _data().proposals[i];
+        }
+
+        return arr;
+    }
+
     /*////////////////////////////////////////////////////////////////////////////////////////////////
                                               INTERNAL FUNCTIONS
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
