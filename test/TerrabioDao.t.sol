@@ -11,7 +11,7 @@ import { ADMIN_ROLE, MEMBER_ROLE } from "src/dao_access/Roles.sol";
 import { LibDaoAccess } from "src/dao_access/LibDaoAccess.sol";
 import { LibFallbackRouter } from "src/fallback_router/LibFallbackRouter.sol";
 
-import { TerrabioDao } from "src/TerrabioDao.sol";
+import { TerrabioDao } from "src/TerrabioDaoOptimized.sol";
 
 import { FallbackRouter } from "src/fallback_router/FallbackRouter.sol";
 import { DaoAccess } from "src/dao_access/DaoAccess.sol";
@@ -216,7 +216,7 @@ contract TerrabioDao_test is Test {
         assertEq(FallbackRouter(DAO).getFunctionImpl(selector1), impl1);
         assertEq(FallbackRouter(DAO).getFunctionImpl(selector2), impl2);
 
-        assertEq(FallbackRouter(DAO).getSelectorList().length, 23);
+        assertEq(FallbackRouter(DAO).getSelectorList().length, 24);
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////

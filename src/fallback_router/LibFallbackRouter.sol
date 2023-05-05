@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.13;
 
-import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
+import { EnumerableSet } from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
 
 library LibFallbackRouter {
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -32,8 +32,8 @@ library LibFallbackRouter {
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
     /// @dev Storage slot for Data struct
-    bytes32 internal constant STORAGE_SLOT =
-        keccak256("terrabiodao.contracts.storage.FallbackRouter.v1");
+    // immutable !
+    bytes32 internal constant STORAGE_SLOT = 0;
 
     /// @return data Data struct at `STORAGE_SLOT`
     function accessData() internal pure returns (Data storage data) {

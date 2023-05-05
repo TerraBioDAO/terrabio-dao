@@ -17,4 +17,7 @@ node_modules
 ## dev modules
 package-lock.json
 
+# Personal untracked dir
+z/
+
 
