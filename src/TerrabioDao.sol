@@ -36,12 +36,12 @@ contract TerrabioDao {
         (bool success, bytes memory resultData) = router.delegatecall(
             abi.encodeWithSignature("getImpl(bytes4)", selector)
         );
-        if (!success) revert(string(resultData));
+        if (!success) _revertWithData(resultData);
 
         address impl = abi.decode(resultData, (address));
         (success, resultData) = impl.delegatecall(msg.data);
 
-        if (!success) revert(string(resultData));
+        if (!success) _revertWithData(resultData);
 
         _returnWithData(resultData);
     }
@@ -51,6 +51,14 @@ contract TerrabioDao {
     function _returnWithData(bytes memory data) private pure {
         assembly {
             return(add(data, 32), mload(data))
+        }
+    }
+
+    /// @dev Revert with arbitrary bytes.
+    /// @param data Revert data.
+    function _revertWithData(bytes memory data) private pure {
+        assembly {
+            revert(add(data, 32), mload(data))
         }
     }
 }

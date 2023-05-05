@@ -42,10 +42,10 @@ contract FallbackRouter is Implementation, RoleControl {
 
     /**
      * Retrieve implementation contract address for a selector OR revert with error
-     * @param selectors array of selectors to update
+     * @param selector function selector
      * @return impl implementation contract address
      */
-    function getImpl(bytes4 selector) external onlyRole(ADMIN_ROLE) returns (address impl) {
+    function getImpl(bytes4 selector) external returns (address) {
         LibFallbackRouter.Data storage data = _data();
         address impl = data.impls[selector];
         //if (impl == address(1)) revert ModulePaused(selector);
