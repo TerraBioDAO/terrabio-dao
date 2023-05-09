@@ -13,8 +13,8 @@ contract TerraBioLabel is ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
 
     error NotAttributed(uint256 labelId);
-    error StillValid(uint256 labelId, LabelStatus status);
-    error CannotRenew(uint256 labelId, LabelStatus status);
+    error StillValid(uint256 labelId, uint256 status);
+    error CannotRenew(uint256 labelId, uint256 status);
     error NoMetadataUpdate(uint256 labelId);
 
     enum LabelStatus {
@@ -60,7 +60,7 @@ contract TerraBioLabel is ERC721URIStorage, Ownable {
 
     function burnLabel(uint256 labelId) external onlyOwner {
         LabelStatus status = labelStatus(labelId);
-        if (status != LabelStatus.Invalid) revert StillValid(labelId, status);
+        if (status != LabelStatus.Invalid) revert StillValid(labelId, uint256(status));
 
         delete _labels[labelId];
         _burn(labelId);
@@ -78,7 +78,7 @@ contract TerraBioLabel is ERC721URIStorage, Ownable {
         string memory updatedURI
     ) external onlyOwner {
         LabelStatus status = labelStatus(labelId);
-        if (status != LabelStatus.Outpassed) revert CannotRenew(labelId, status);
+        if (status != LabelStatus.Outpassed) revert CannotRenew(labelId, uint256(status));
 
         // URIs checked
         bytes32 lastURI = keccak256(bytes(tokenURI(labelId)));
