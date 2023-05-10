@@ -32,8 +32,8 @@ library LibFallbackRouter {
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
     /// @dev Storage slot for Data struct
-    // immutable !
-    bytes32 internal constant STORAGE_SLOT = 0;
+    bytes32 internal constant STORAGE_SLOT =
+        keccak256("terrabiodao.contracts.storage.FallbackRouter");
 
     /// @return data Data struct at `STORAGE_SLOT`
     function accessData() internal pure returns (Data storage data) {

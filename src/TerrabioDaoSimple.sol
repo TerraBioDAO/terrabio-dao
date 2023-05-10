@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.13;
 
+import { LibFallbackRouter } from "./fallback_router/LibFallbackRouter.sol";
+
 /**
  * @title Unique storage contract for the DAO system
  * @dev This contract contains only the execution logic for addressing the
@@ -22,16 +24,15 @@ contract TerrabioDao {
     receive() external payable {}
 
     fallback() external payable {
-        // address router slot : impls[bytes4(0)]
-        bytes32 slot = 0x8ce8d4b76d0c9196e0b9098a911177217a2ae6c4a38ec5853bbb73f5b868698a;
-        address router;
-        assembly {
-            router := sload(slot)
-        }
+        mapping(bytes4 => address) storage impls = LibFallbackRouter.accessData().impls;
 
-        (bool success, bytes memory resultData) = router.delegatecall(
-            abi.encodeWithSignature("execute(bytes)", msg.data)
-        );
+        bytes4 selector = bytes4(msg.data);
+        address impl = impls[selector];
+
+        if (impl == address(0)) revert LibFallbackRouter.NotImplemented(selector);
+
+        (bool success, bytes memory resultData) = impl.delegatecall(msg.data);
+
         if (!success) _revertWithData(resultData);
 
         _returnWithData(resultData);

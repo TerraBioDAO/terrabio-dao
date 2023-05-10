@@ -36,23 +36,20 @@ contract FallbackRouter is Implementation, RoleControl {
         _updateFunction(bytes4(0), IMPL_ADDR, data);
     }
 
+    /**
+     * @dev permissionless function as delegatecall from the DAO is not authorized
+     */
+    function execute(bytes memory originalMsgData) external {
+        address impl = _getFunctionImpl(bytes4(originalMsgData));
+        (bool success, bytes memory resultData) = impl.delegatecall(originalMsgData);
+        if (!success) _revertWithData(resultData);
+
+        _returnWithData(resultData);
+    }
+
     /*////////////////////////////////////////////////////////////////////////////////////////////////
                                               EXTERNAL FUNCTIONS
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
-
-    /**
-     * Retrieve implementation contract address for a selector OR revert with error
-     * @param selector function selector
-     * @return impl implementation contract address
-     */
-    function getImpl(bytes4 selector) external returns (address) {
-        LibFallbackRouter.Data storage data = _data();
-        address impl = data.impls[selector];
-        //if (impl == address(1)) revert ModulePaused(selector);
-        if (impl == address(0)) revert LibFallbackRouter.NotImplemented(selector);
-
-        return impl;
-    }
 
     /**
      * @notice Batch functions update
@@ -104,9 +101,13 @@ contract FallbackRouter is Implementation, RoleControl {
                                                   GETTERS
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-    /// @return address implementing the function's `selector`
+    /**
+     * Retrieve implementation contract address for a selector OR revert with error
+     * @param selector function selector
+     * @return address implementing the function's `selector`
+     */
     function getFunctionImpl(bytes4 selector) external view returns (address) {
-        return _data().impls[selector];
+        return _getFunctionImpl(selector);
     }
 
     /// @return array of implementation address for the `selector`
@@ -132,6 +133,13 @@ contract FallbackRouter is Implementation, RoleControl {
                                               INTERNAL FUNCTIONS
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+    function _getFunctionImpl(bytes4 selector) internal view returns (address) {
+        address impl = _data().impls[selector];
+        if (impl == address(0)) revert LibFallbackRouter.NotImplemented(selector);
+
+        return impl;
+    }
+
     function _updateFunction(
         bytes4 selector,
         address impl,
@@ -150,5 +158,21 @@ contract FallbackRouter is Implementation, RoleControl {
 
     function _data() internal pure returns (LibFallbackRouter.Data storage) {
         return LibFallbackRouter.accessData();
+    }
+
+    /// @dev Return with arbitrary bytes.
+    /// @param data Return data.
+    function _returnWithData(bytes memory data) private pure {
+        assembly {
+            return(add(data, 32), mload(data))
+        }
+    }
+
+    /// @dev Revert with arbitrary bytes.
+    /// @param data Revert data.
+    function _revertWithData(bytes memory data) private pure {
+        assembly {
+            revert(add(data, 32), mload(data))
+        }
     }
 }

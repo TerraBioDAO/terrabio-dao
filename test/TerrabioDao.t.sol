@@ -88,6 +88,22 @@ contract TerrabioDao_test is Test {
         vm.label(DIAMOND, "DIAMOND");
     }
 
+    function testSetup() public {
+        assertEq(
+            ROUTER,
+            address(
+                uint160(
+                    uint256(
+                        vm.load(
+                            DAO,
+                            0x8ce8d4b76d0c9196e0b9098a911177217a2ae6c4a38ec5853bbb73f5b868698a
+                        )
+                    )
+                )
+            )
+        );
+    }
+
     /*////////////////////////////////////////////////////////////////////////////////////////////////
                                              CONSTRUCTOR
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
