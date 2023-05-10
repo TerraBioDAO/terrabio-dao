@@ -2,131 +2,100 @@
 
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
+import { BaseTest } from "test/base/BaseTest.t.sol";
 
-import {ADMIN_ROLE, MEMBER_ROLE} from "src/dao_access/Roles.sol";
-import {LibGovernance} from "src/governance/LibGovernance.sol";
-import {DaoAccess} from "src/dao_access/DaoAccess.sol";
-import {Governance} from "src/governance/Governance.sol";
-import {Callable} from "./mocks/Callable.sol";
+import { Governance } from "src/governance/Governance.sol";
+import { Callable } from "./mocks/Callable.sol";
 
-contract Governance_test is Test {
+contract Governance_test is BaseTest {
     Callable internal callable;
     address internal CALLABLE;
 
-    Governance internal gov;
-    address internal GOV;
-
-    address internal constant OWNER = address(501);
-    // address internal constant USER1 = address(1);
-    address internal constant USER2 = address(2);
-    address internal constant USER3 = address(3);
-    address internal constant USER4 = address(4);
-    address internal constant USER5 = address(5);
+    Governance internal gov_impl;
+    Governance internal dao;
 
     function setUp() public {
+        _newUsersSet(0, 4);
+        _deployDAO();
+        gov_impl = _bootstrapGovernance(USERS);
+        dao = Governance(DAO);
+
         callable = new Callable();
         CALLABLE = address(callable);
 
-        // role setup
-        DaoAccess access = new DaoAccess(OWNER);
-        vm.startPrank(OWNER);
-        access.hasRole(ADMIN_ROLE, OWNER);
-        access.bootstrap();
-        access.grantRole(ADMIN_ROLE, address(access));
-        // access.grantRole(USER1, MEMBER_ROLE);
-        access.grantRole(MEMBER_ROLE, USER2);
-        access.grantRole(MEMBER_ROLE, USER3);
-        access.grantRole(MEMBER_ROLE, USER4);
-        access.grantRole(MEMBER_ROLE, USER5);
-        access.renounceRole(ADMIN_ROLE, OWNER);
-        vm.stopPrank();
-
-        // move access & members storage to Governance
-        vm.etch(address(access), address(new Governance()).code);
-        gov = Governance(address(access));
-        GOV = address(gov);
-
-        // bootstrap
-        vm.prank(GOV);
-        gov.bootstrap();
+        _addFunction(Callable.pingMe.selector, CALLABLE);
+        callable = Callable(DAO);
     }
 
     function test_setup() public {
         bytes[] memory calls = new bytes[](0);
-        vm.prank(USER3);
-        gov.propose(1000, 2 days, 0, 10000, calls);
+        vm.prank(USERS[0]);
+        dao.propose(1000, 2 days, 0, 10000, calls);
     }
 
     function test_propose_StartAProposal() public returns (uint256 proposalId) {
-        assertEq(uint8(gov.getProposalStatus(420)), 0); // unknown
+        assertEq(uint8(dao.getProposalStatus(420)), 0); // unknown
 
         bytes[] memory calls = new bytes[](1);
-        calls[0] = abi.encode(
-            CALLABLE,
-            abi.encodeWithSignature("pingMe(uint256)", 42)
-        );
+        calls[0] = abi.encode(CALLABLE, abi.encodeWithSignature("pingMe(uint256)", 42));
         // abi.encodePacked(
         //     abi.encodePacked(CALLABLE),
         //     abi.encodeWithSignature("pingMe(uint256)", 42)
         // );
 
-        vm.prank(USER4);
-        proposalId = gov.propose(12_000, 2 days, 5 days, 10000, calls);
+        vm.prank(USERS[0]);
+        proposalId = dao.propose(12_000, 2 days, 5 days, 10000, calls);
 
         // check info
-        assertTrue(gov.getProposal(proposalId).active);
-        assertEq(gov.getProposal(proposalId).startAt, 12_000);
-        assertEq(gov.getProposal(proposalId).endAt, 12_000 + 2 days);
-        assertEq(gov.getProposal(proposalId).gracePeriod, 5 days);
-        assertEq(gov.getProposal(proposalId).threshold, 10000);
-        assertEq(gov.getProposal(proposalId).proposer, USER4);
-        assertEq(gov.getProposal(proposalId).calls[0], calls[0]);
+        assertTrue(dao.getProposal(proposalId).active);
+        assertEq(dao.getProposal(proposalId).startAt, 12_000);
+        assertEq(dao.getProposal(proposalId).endAt, 12_000 + 2 days);
+        assertEq(dao.getProposal(proposalId).gracePeriod, 5 days);
+        assertEq(dao.getProposal(proposalId).threshold, 10000);
+        assertEq(dao.getProposal(proposalId).proposer, USERS[0]);
+        assertEq(dao.getProposal(proposalId).calls[0], calls[0]);
 
-        assertEq(uint8(gov.getProposalStatus(proposalId)), 1); // pending
+        assertEq(uint8(dao.getProposalStatus(proposalId)), 1); // pending
 
         vm.warp(13_000);
 
-        assertEq(uint8(gov.getProposalStatus(proposalId)), 2); // ongoing
+        assertEq(uint8(dao.getProposalStatus(proposalId)), 2); // ongoing
 
         vm.warp(block.timestamp + 2 days);
 
-        assertEq(uint8(gov.getProposalStatus(proposalId)), 3); //voted
+        assertEq(uint8(dao.getProposalStatus(proposalId)), 3); //voted
 
         vm.warp(block.timestamp + 5 days);
 
-        assertEq(uint8(gov.getProposalStatus(proposalId)), 4); //ready
+        assertEq(uint8(dao.getProposalStatus(proposalId)), 4); //ready
         vm.warp(0);
     }
 
-    function test_propose_AllMemberVoteYes()
-        public
-        returns (uint256 proposalId)
-    {
+    function test_propose_AllMemberVoteYes() public returns (uint256 proposalId) {
         proposalId = test_propose_StartAProposal();
         vm.warp(13_000);
         vm.prank(OWNER);
-        gov.vote(proposalId, 1);
-        vm.prank(USER2);
-        gov.vote(proposalId, 1);
-        vm.prank(USER3);
-        gov.vote(proposalId, 1);
-        vm.prank(USER4);
-        gov.vote(proposalId, 1);
+        dao.vote(proposalId, 1);
+        vm.prank(USERS[0]);
+        dao.vote(proposalId, 1);
+        vm.prank(USERS[1]);
+        dao.vote(proposalId, 1);
+        vm.prank(USERS[2]);
+        dao.vote(proposalId, 1);
 
-        assertEq(uint8(gov.getProposalStatus(proposalId)), 2);
+        assertEq(uint8(dao.getProposalStatus(proposalId)), 2);
 
-        vm.prank(USER5);
-        gov.vote(proposalId, 1);
+        vm.prank(USERS[3]);
+        dao.vote(proposalId, 1);
 
-        assertEq(uint8(gov.getProposalStatus(proposalId)), 4);
+        assertEq(uint8(dao.getProposalStatus(proposalId)), 4);
     }
 
     function test_execute_FulfillProposal() public {
         uint256 proposalId = test_propose_AllMemberVoteYes();
 
         // prank any
-        gov.execute(proposalId);
-        assertEq(uint8(gov.getProposalStatus(proposalId)), 6);
+        dao.execute(proposalId);
+        assertEq(uint8(dao.getProposalStatus(proposalId)), 6);
     }
 }
