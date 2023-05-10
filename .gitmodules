@@ -7,3 +7,7 @@
 [submodule "lib/openzeppelin-contracts"]
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "lib/foundry-test-helpers"]
+	path = lib/foundry-test-helpers
+	url = https://github.com/steftroubadour/foundry-test-helpers
+	branch = v0.0.2
