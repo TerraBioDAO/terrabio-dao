@@ -3,3 +3,4 @@ ds-test/=lib/forge-std/lib/ds-test/src/
 dynamic-memory-arrays/=lib/dynamic-memory-arrays/contracts/
 forge-std/=lib/forge-std/src/
 openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/
+foundry-test-helpers/=lib/foundry-test-helpers/src/
