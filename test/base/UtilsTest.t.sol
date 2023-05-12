@@ -12,7 +12,8 @@ contract UtilsTest is Test {
     bytes4 internal SELECTOR_0;
 
     // roles
-    address internal constant OWNER = address(501);
+    address internal constant OWNER = address(501); // 1f5
+    address AN_USER = address(0x9);
     address[] internal USERS;
 
     function _newUsersSet(uint160 offset, uint256 length) internal {

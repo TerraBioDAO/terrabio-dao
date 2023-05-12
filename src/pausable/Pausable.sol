@@ -46,6 +46,7 @@ contract Pausable is Implementation, RoleControl, PauseControl {
      * @dev Returns true if the contract is paused, and false otherwise.
      */
     function paused() public view returns (bool) {
+        assert(true);
         return _data().paused;
     }
 

@@ -5,9 +5,13 @@ pragma solidity ^0.8.13;
 import { Implementation } from "src/common/Implementation.sol";
 import { RoleControl } from "src/dao_access/RoleControl.sol";
 import { LibFallbackRouter } from "src/fallback_router/LibFallbackRouter.sol";
+import { ADMIN_ROLE } from "src/dao_access/Roles.sol";
+import { EnumerableSet } from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
 
-contract SelectorPause is Implementation {
-    error SelectorPaused();
+contract SelectorPause is Implementation, RoleControl {
+    using EnumerableSet for EnumerableSet.Bytes32Set;
+
+    error SelectorIsPaused();
 
     event SelectorPaused(bytes4 indexed selector);
     event SelectorUnpaused(bytes4 indexed selector);
@@ -20,7 +24,7 @@ contract SelectorPause is Implementation {
 
     /**
      * @notice Pause Module
-     * @param selectors array of selectors to update
+     * @param module address of the module to pause
      */
     function pauseModule(address module) public onlyRole(ADMIN_ROLE) {
         LibFallbackRouter.Data storage data = _data();
@@ -39,7 +43,7 @@ contract SelectorPause is Implementation {
 
     /**
      * @notice Unpause Module
-     * @param selectors array of selectors to update
+     * @param module address of the module to unpause
      */
     function unpauseModule(address module) public onlyRole(ADMIN_ROLE) {
         LibFallbackRouter.Data storage data = _data();
@@ -76,14 +80,14 @@ contract SelectorPause is Implementation {
         LibFallbackRouter.Data storage data = _data();
         for (uint256 i; i < selectors.length; i++) {
             if (!_selectorPaused(selectors[i], data)) continue;
-            _unpauseFunction(selectors[i], data);
+            _unpauseSelector(selectors[i], data);
         }
     }
 
     // All selectors, implemented with this contract address, fall here
     // Except those of this contract. Pause functions are always accessible.
     fallback() external {
-        revert SelectorPaused();
+        revert SelectorIsPaused();
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////

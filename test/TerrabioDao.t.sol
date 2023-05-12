@@ -11,15 +11,15 @@ import { FallbackRouter } from "src/fallback_router/FallbackRouter.sol";
 import { DaoAccess } from "src/dao_access/DaoAccess.sol";
 import { DiamondLoupe } from "src/diamond_retrocompability/DiamondLoupe.sol";
 import { Governance } from "src/governance/Governance.sol";
-
-// import { Pausable } from "src/pausable/Pausable.sol";
+import { Pausable } from "src/pausable/Pausable.sol";
+import { SelectorPause } from "src/pausable/SelectorPause.sol";
 
 contract TerrabioDao_test is BaseTest {
     // features
     DaoAccess internal access;
     FallbackRouter internal router;
     DiamondLoupe internal diamond;
-    // Pausable internal pausable;
+    Pausable internal pausable;
     Governance internal gov;
 
     function setUp() public {
@@ -70,13 +70,24 @@ contract TerrabioDao_test is BaseTest {
         assertEq(router.getFunctionImpl(DaoAccess.getRoleAdmin.selector), ACCESS);
     }
 
-    // function test_postDeployment_Pausable() public {
-    //     assertEq(router.getFunctionImpl(Pausable.paused.selector), PAUSABLE);
-    //     assertEq(router.getFunctionImpl(Pausable.pause.selector), PAUSABLE);
-    //     assertEq(router.getFunctionImpl(Pausable.unpause.selector), PAUSABLE);
+    function test_postDeployment_Pausable() public {
+        assertEq(router.getFunctionImpl(Pausable.paused.selector), PAUSABLE);
+        assertEq(router.getFunctionImpl(Pausable.pause.selector), PAUSABLE);
+        assertEq(router.getFunctionImpl(Pausable.unpause.selector), PAUSABLE);
 
-    //     assertFalse(Pausable(DAO).paused());
-    // }
+        assertFalse(Pausable(DAO).paused());
+
+        assertEq(router.getFunctionImpl(SelectorPause.pauseModule.selector), SELECTOR_PAUSE);
+        assertEq(router.getFunctionImpl(SelectorPause.unpauseModule.selector), SELECTOR_PAUSE);
+        assertEq(
+            router.getFunctionImpl(SelectorPause.batchPauseSelectors.selector),
+            SELECTOR_PAUSE
+        );
+        assertEq(
+            router.getFunctionImpl(SelectorPause.batchUnpauseSelectors.selector),
+            SELECTOR_PAUSE
+        );
+    }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////
                                            GOVERNANCE
@@ -119,7 +130,7 @@ contract TerrabioDao_test is BaseTest {
         assertEq(router.getFunctionImpl(selector1), impl1);
         assertEq(router.getFunctionImpl(selector2), impl2);
 
-        assertEq(router.getSelectorList().length, 25);
+        assertEq(router.getSelectorList().length, 32);
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////
@@ -142,6 +153,6 @@ contract TerrabioDao_test is BaseTest {
 
         DiamondLoupe.Facet[] memory facets = diamond.facets();
 
-        assertEq(facets.length, 4);
+        assertEq(facets.length, 6);
     }
 }
