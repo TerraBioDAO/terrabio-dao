@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
-import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
-import {DynamicalMemoryArray} from "dynamic-memory-arrays/DynamicalMemoryArray.sol";
+import { EnumerableSet } from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
+import { DynamicalMemoryArray } from "dynamic-memory-arrays/DynamicalMemoryArray.sol";
 
 import "src/fallback_router/LibFallbackRouter.sol";
 import "./IDiamondLoupe.sol";
@@ -56,9 +56,7 @@ contract DiamondLoupe is IDiamondLoupe {
     /// @dev If facet is not found return address(0).
     /// @param _functionSelector The function selector.
     /// @return facetAddress_ The facet address.
-    function facetAddress(
-        bytes4 _functionSelector
-    ) external view returns (address facetAddress_) {
+    function facetAddress(bytes4 _functionSelector) external view returns (address facetAddress_) {
         return LibFallbackRouter.accessData().impls[_functionSelector];
     }
 
@@ -139,10 +137,7 @@ contract DiamondLoupe is IDiamondLoupe {
             }
 
             // fill Facets array
-            facets_[i] = Facet({
-                facetAddress: impl,
-                functionSelectors: selectors
-            });
+            facets_[i] = Facet({ facetAddress: impl, functionSelectors: selectors });
 
             unchecked {
                 ++i;

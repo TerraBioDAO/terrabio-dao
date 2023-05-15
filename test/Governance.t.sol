@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
 import { BaseTest } from "test/base/BaseTest.t.sol";
 
@@ -97,5 +97,22 @@ contract Governance_test is BaseTest {
         // prank any
         dao.execute(proposalId);
         assertEq(uint8(dao.getProposalStatus(proposalId)), 6);
+    }
+}
+
+import { FacetTest } from "test/base/FacetTest.sol";
+
+contract Governance_security_test is FacetTest {
+    function setUp() public {
+        facetName = "Governance";
+        functionExceptionIdentifiers.push("fe0d94c1"); // execute
+        functionExceptionIdentifiers.push("b384abef"); // vote
+        functionExceptionIdentifiers.push("678abbf7"); // propose
+
+        _newUsersSet(0, 4);
+        _deployFullDAO(USERS);
+
+        // After Dao deployment
+        IMPL = GOV;
     }
 }

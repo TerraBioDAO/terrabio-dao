@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
 import { BaseTest } from "test/base/BaseTest.t.sol";
 import { ADMIN_ROLE, MEMBER_ROLE } from "src/dao_access/Roles.sol";
@@ -40,5 +40,20 @@ contract FallbackRouter_test is BaseTest {
 
     function test_getSelectorList_ReturnListOfSelectors() public {
         dao.getSelectorList();
+    }
+}
+
+import { FacetTest } from "test/base/FacetTest.sol";
+
+contract FallbackRouter_security_test is FacetTest {
+    function setUp() public {
+        facetName = "FallbackRouter";
+        // functionExceptionSelectors.push("execute");
+
+        _newUsersSet(0, 4);
+        _deployFullDAO(USERS);
+
+        // After Dao deployment
+        IMPL = ROUTER;
     }
 }

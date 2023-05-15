@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
-import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
+import { EnumerableSet } from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
 
-import {ListLengthMismatch} from "src/common/Errors.sol";
-import {Implementation} from "src/common/Implementation.sol";
-import {ADMIN_ROLE} from "src/dao_access/Roles.sol";
-import {RoleControl} from "src/dao_access/RoleControl.sol";
-import {LibFallbackRouter} from "./LibFallbackRouter.sol";
+import { ListLengthMismatch } from "src/common/Errors.sol";
+import { Implementation } from "src/common/Implementation.sol";
+import { ADMIN_ROLE } from "src/dao_access/Roles.sol";
+import { RoleControl } from "src/dao_access/RoleControl.sol";
+import { LibFallbackRouter } from "./LibFallbackRouter.sol";
 
 /**
  * @title Implementation for routing calls made on the main contract.
@@ -63,10 +63,7 @@ contract FallbackRouter is Implementation, RoleControl {
      * @param selector the selector to update
      * @param impl implementation address
      */
-    function updateFunction(
-        bytes4 selector,
-        address impl
-    ) external onlyRole(ADMIN_ROLE) {
+    function updateFunction(bytes4 selector, address impl) external onlyRole(ADMIN_ROLE) {
         _updateFunction(selector, impl, _data());
     }
 
@@ -80,17 +77,11 @@ contract FallbackRouter is Implementation, RoleControl {
     function rollback(bytes4 selector) external onlyRole(ADMIN_ROLE) {
         LibFallbackRouter.Data storage data = _data();
         address currentImpl = data.impls[selector];
-        address rollbackedImpl = data.history[selector][
-            data.history[selector].length - 1
-        ];
+        address rollbackedImpl = data.history[selector][data.history[selector].length - 1];
 
         data.impls[selector] = rollbackedImpl;
 
-        emit LibFallbackRouter.FunctionUpdated(
-            selector,
-            currentImpl,
-            rollbackedImpl
-        );
+        emit LibFallbackRouter.FunctionUpdated(selector, currentImpl, rollbackedImpl);
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////
@@ -103,9 +94,7 @@ contract FallbackRouter is Implementation, RoleControl {
     }
 
     /// @return array of implementation address for the `selector`
-    function getFunctionHistory(
-        bytes4 selector
-    ) external view returns (address[] memory) {
+    function getFunctionHistory(bytes4 selector) external view returns (address[] memory) {
         return _data().history[selector];
     }
 
@@ -138,9 +127,7 @@ contract FallbackRouter is Implementation, RoleControl {
         data.impls[selector] = impl;
 
         // update the selector list
-        impl == address(0)
-            ? data.selectors.remove(selector)
-            : data.selectors.add(selector);
+        impl == address(0) ? data.selectors.remove(selector) : data.selectors.add(selector);
 
         emit LibFallbackRouter.FunctionUpdated(selector, oldImpl, impl);
     }

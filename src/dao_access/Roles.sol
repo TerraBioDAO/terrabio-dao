@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
 // Main role for the DAO, this role should be assinged only to the main contract.
 // The deployer should have this role to configure the DAO and then `renounceRole`.

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
 import { Test, Vm } from "forge-std/Test.sol";
 import { BaseTest } from "test/base/BaseTest.t.sol";
@@ -52,13 +52,6 @@ contract SelectorPause_test is Test {
 }
 
 contract SelectorPause_global_test is BaseTest {
-    DaoAccess internal access;
-    FallbackRouter internal router;
-    DiamondLoupe internal diamond;
-    Pausable internal pausable;
-    Governance internal gov;
-    SelectorPause internal selectorPause;
-
     function setUp() public {
         _newUsersSet(0, 4);
         _deployFullDAO(USERS);
@@ -71,7 +64,91 @@ contract SelectorPause_global_test is BaseTest {
         assertTrue(DaoAccess(DAO).hasRole(ADMIN_ROLE, DAO));
         vm.stopPrank();
 
+        /*vm.prank(AN_USER);
+        vm.expectRevert(
+            abi.encodeWithSelector(LibDaoAccess.MissingRole.selector, AN_USER, ADMIN_ROLE)
+        );
+        Pausable(DAO).pause();*/
+    }
+
+    function test_batchPauseUnpauseSelectors() public {
+        address impl = DiamondLoupe(DAO).facetAddress(Pausable.paused.selector);
+        assertEq(impl, PAUSABLE);
+
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = Pausable.paused.selector;
+        vm.prank(DAO);
+        SelectorPause(DAO).batchPauseSelectors(selectors);
+
         vm.prank(AN_USER);
-        Pausable(DAO).pause();
+        impl = DiamondLoupe(DAO).facetAddress(Pausable.paused.selector);
+        assertEq(impl, SELECTOR_PAUSE);
+
+        vm.prank(DAO);
+        SelectorPause(DAO).batchUnpauseSelectors(selectors);
+
+        vm.prank(AN_USER);
+        impl = DiamondLoupe(DAO).facetAddress(Pausable.paused.selector);
+        assertEq(impl, PAUSABLE);
+    }
+
+    function test_pauseUnpauseModule() public {
+        //bytes4[] memory selectors = DiamondLoupe(DAO).facetFunctionSelectors(PAUSABLE);
+        bytes4[] memory selectors = new bytes4[](3);
+        selectors[0] = Pausable.paused.selector;
+        selectors[1] = Pausable.pause.selector;
+        selectors[2] = Pausable.unpause.selector;
+
+        address impl;
+
+        for (uint i; i < selectors.length; i++) {
+            vm.prank(AN_USER);
+            impl = DiamondLoupe(DAO).facetAddress(selectors[i]);
+            assertEq(impl, PAUSABLE);
+        }
+
+        vm.prank(DAO);
+        SelectorPause(DAO).pauseModule(PAUSABLE);
+
+        for (uint i; i < selectors.length; i++) {
+            vm.prank(AN_USER);
+            impl = DiamondLoupe(DAO).facetAddress(selectors[i]);
+            assertEq(impl, SELECTOR_PAUSE);
+        }
+
+        vm.prank(DAO);
+        SelectorPause(DAO).unpauseModule(PAUSABLE);
+
+        for (uint i; i < selectors.length; i++) {
+            vm.prank(AN_USER);
+            impl = DiamondLoupe(DAO).facetAddress(selectors[i]);
+            assertEq(impl, PAUSABLE);
+        }
+    }
+
+    function test_fallback() public {
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = Pausable.paused.selector;
+        vm.prank(DAO);
+        SelectorPause(DAO).batchPauseSelectors(selectors);
+
+        vm.prank(DAO);
+        vm.expectRevert(abi.encodeWithSelector(SelectorPause.SelectorIsPaused.selector));
+        Pausable(DAO).paused();
+    }
+}
+
+import { FacetTest } from "test/base/FacetTest.sol";
+
+contract SelectorPause_security_test is FacetTest {
+    function setUp() public {
+        facetName = "SelectorPause";
+        // functionExceptionIdentifiers.push("execute");
+
+        _newUsersSet(0, 4);
+        _deployFullDAO(USERS);
+
+        // After Dao deployment
+        IMPL = SELECTOR_PAUSE;
     }
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
 import { Implementation } from "src/common/Implementation.sol";
 import { RoleControl } from "src/dao_access/RoleControl.sol";
@@ -50,10 +50,12 @@ contract SelectorPause is Implementation, RoleControl {
         bytes32[] memory selectors = data.selectors.values();
 
         for (uint256 i; i < selectors.length; i++) {
-            if (
-                data.impls[bytes4(selectors[i])] != module ||
-                _selectorPaused(bytes4(selectors[i]), data)
-            ) continue;
+            address[] storage selectorHistorical = data.history[bytes4(selectors[i])];
+            if (selectorHistorical.length == 0) continue;
+
+            address lastSelectorAddress = selectorHistorical[selectorHistorical.length - 1];
+            if (lastSelectorAddress != module || !_selectorPaused(bytes4(selectors[i]), data))
+                continue;
             _unpauseSelector(bytes4(selectors[i]), data);
         }
 
@@ -98,7 +100,7 @@ contract SelectorPause is Implementation, RoleControl {
         address oldImpl = data.impls[selector];
 
         data.history[selector].push(oldImpl);
-        data.impls[selector] = address(this);
+        data.impls[selector] = IMPL_ADDR;
 
         emit SelectorPaused(selector);
     }
@@ -107,7 +109,7 @@ contract SelectorPause is Implementation, RoleControl {
         address[] storage historical = _data().history[selector];
         address oldImpl = historical[historical.length - 1];
 
-        data.history[selector].push(address(this));
+        data.history[selector].push(IMPL_ADDR);
         data.impls[selector] = oldImpl;
 
         emit SelectorUnpaused(selector);
@@ -117,7 +119,7 @@ contract SelectorPause is Implementation, RoleControl {
         bytes4 selector,
         LibFallbackRouter.Data storage data
     ) internal view returns (bool) {
-        return (data.impls[selector] == address(this));
+        return (data.impls[selector] == IMPL_ADDR);
     }
 
     function _data() internal pure returns (LibFallbackRouter.Data storage) {

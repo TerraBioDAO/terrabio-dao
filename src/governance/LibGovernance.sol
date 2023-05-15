@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
 library LibGovernance {
     event Voted(uint256 indexed proposalId, address indexed voter);
