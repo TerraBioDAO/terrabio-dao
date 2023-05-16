@@ -7,6 +7,7 @@ import { BaseTest } from "./BaseTest.t.sol";
 import { ArtifactHelper } from "test/base/ArtifactHelper.sol";
 
 import { FallbackRouter } from "src/fallback_router/FallbackRouter.sol";
+import { DiamondLoupe } from "src/diamond_retrocompability/DiamondLoupe.sol";
 import { LibDaoAccess } from "src/dao_access/LibDaoAccess.sol";
 import { ADMIN_ROLE } from "src/dao_access/Roles.sol";
 
@@ -30,6 +31,7 @@ abstract contract FacetTest is BaseTest, ArtifactHelper {
     function testOnyAdminCanSet() public {
         vm.prank(AN_USER);
         bytes4[] memory selectors = FallbackRouter(DAO).getSelectorList();
+        //bytes4[] memory selectors = DiamondLoupe(DAO).facetFunctionSelectors(IMPL);
         string[] memory methodIdentifiers = new string[](selectors.length);
         string memory artifact = _retrieveContractJsonFromArtifact(facetName);
         string memory methodIdentifierJson = _retrieveMethodIdentifierJsonFromArtifact(artifact);
@@ -43,7 +45,6 @@ abstract contract FacetTest is BaseTest, ArtifactHelper {
         for (uint i; i < selectors.length; i++) {
             methodIdentifiers[i] = _methodIdentifierFromSelector(selectors[i]);
             methods[methodIdentifiers[i]].selector = selectors[i];
-            //emit log_named_bytes32("selector", methods[methodIdentifiers[i]].selector);
             methods[methodIdentifiers[i]].impl = FallbackRouter(DAO).getFunctionImpl(selectors[i]);
             methods[methodIdentifiers[i]].signature = _retrieveSignatureFromArtifact(
                 methodIdentifierJson,
@@ -74,7 +75,7 @@ abstract contract FacetTest is BaseTest, ArtifactHelper {
             assertTrue(isArrayContain(ids[i], methodIdentifiers));
         }
 
-        // Test that all functions that change Storage with onlyAdmin requirement
+        // Test that all functions (except exceptions) that change Storage have onlyAdmin requirement
         for (uint i; i < ids.length; i++) {
             uint functionId = methods[ids[i]].functionId;
 
@@ -108,7 +109,7 @@ abstract contract FacetTest is BaseTest, ArtifactHelper {
     function getPayload(
         string memory functionIdentifier,
         ElementAbi memory elementAbi
-    ) internal returns (bytes memory) {
+    ) internal view returns (bytes memory) {
         bytes memory payload;
         payload = bytes.concat(payload, methods[functionIdentifier].selector);
         for (uint i; i < elementAbi.inputs.length; i++) {
@@ -120,7 +121,7 @@ abstract contract FacetTest is BaseTest, ArtifactHelper {
     function retrieveFunctionId(
         string memory signature,
         string[] memory functionSignatures
-    ) internal returns (uint) {
+    ) internal pure returns (uint) {
         for (uint i; i < functionSignatures.length; i++) {
             if (areStringsEquals(signature, functionSignatures[i])) return i;
         }

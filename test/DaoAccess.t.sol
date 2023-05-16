@@ -253,7 +253,10 @@ import { FacetTest } from "test/base/FacetTest.sol";
 contract DaoAccess_security_test is FacetTest {
     function setUp() public {
         facetName = "DaoAccess";
-        // functionExceptionSelectors.push("execute");
+        functionExceptionIdentifiers.push("2f2ff15d"); // grantRole
+        functionExceptionIdentifiers.push("36568abe"); // renounceRole
+        functionExceptionIdentifiers.push("d547741f"); // revokeRole
+        functionExceptionIdentifiers.push("dfde5e58"); // setAdminRole
 
         _newUsersSet(0, 4);
         _deployFullDAO(USERS);

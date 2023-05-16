@@ -38,7 +38,7 @@ abstract contract ArtifactHelper is StringHelper, Test {
     function _callData(
         bytes4 selector,
         string[] memory types
-    ) internal view returns (bytes memory) {
+    ) internal pure returns (bytes memory) {
         bytes memory callData;
         callData = bytes.concat(callData, selector);
         for (uint i; i < types.length; i++) {
@@ -94,14 +94,14 @@ abstract contract ArtifactHelper is StringHelper, Test {
 
     function _retrieveFunctionsFromArtifact(
         string memory json
-    ) internal view returns (ElementAbi[] memory) {
+    ) internal pure returns (ElementAbi[] memory) {
         bytes memory functions = json.parseRaw('.abi.[?(@.type == "function")]');
         return abi.decode(functions, (ElementAbi[]));
     }
 
     function _retrieveMethodIdentifiersFromArtifact(
         string memory json
-    ) internal view returns (string[] memory) {
+    ) internal pure returns (string[] memory) {
         bytes memory functions = json.parseRaw(".methodIdentifiers.*");
         return abi.decode(functions, (string[]));
     }
@@ -128,7 +128,7 @@ abstract contract ArtifactHelper is StringHelper, Test {
 
     function _retrieveMethodIdentifierJsonFromArtifact(
         string memory json
-    ) internal view returns (string memory) {
+    ) internal pure returns (string memory) {
         uint startPosition = getPositionStringContained("methodIdentifiers", json);
         uint end = findFirstCharPositionAfter("}", startPosition, json);
         return slice(startPosition, end, json);
@@ -137,7 +137,7 @@ abstract contract ArtifactHelper is StringHelper, Test {
     function _retrieveSignatureFromArtifact(
         string memory json,
         string memory methodIdentifier
-    ) internal returns (string memory) {
+    ) internal pure returns (string memory) {
         if (!isStringContain(methodIdentifier, json)) return "";
         // "signature": "methodIdentifier"
         uint end = getPositionStringContained(methodIdentifier, json) - 5;
@@ -148,7 +148,7 @@ abstract contract ArtifactHelper is StringHelper, Test {
 
     function _retrieveSignatureFromElement(
         ElementAbi memory elementAbi
-    ) internal view returns (string memory) {
+    ) internal pure returns (string memory) {
         string memory signature = string.concat(elementAbi.name, "(");
         if (elementAbi.inputs.length == 0) return string.concat(signature, ")");
         for (uint i; i < elementAbi.inputs.length - 1; i++) {
@@ -158,7 +158,7 @@ abstract contract ArtifactHelper is StringHelper, Test {
         return string.concat(signature, elementAbi.inputs[elementAbi.inputs.length - 1].type_, ")");
     }
 
-    function _methodIdentifierFromSelector(bytes4 selector) internal view returns (string memory) {
+    function _methodIdentifierFromSelector(bytes4 selector) internal pure returns (string memory) {
         return slice(3, 10, vm.toString(selector));
     }
 
@@ -236,7 +236,6 @@ abstract contract ArtifactHelper is StringHelper, Test {
         string memory where
     ) public pure returns (uint256) {
         require(bytes(char).length == 1 && startPosition != 0);
-        uint256 whereBytesLength = bytes(where).length;
 
         for (uint256 i = startPosition - 1; i > 0; i--) {
             if (areStringsEquals(slice(i + 1, i + 1, where), char)) return i + 1;

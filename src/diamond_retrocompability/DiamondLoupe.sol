@@ -27,8 +27,8 @@ contract DiamondLoupe is IDiamondLoupe {
 
     /// @notice Gets all the function selectors provided by a facet.
     /// @param _facet The facet address.
-    /// @return facetFunctionSelectors_
-    function facetFunctionSelectors(
+    /// @return
+    /*function facetFunctionSelectors(
         address _facet
     ) external view returns (bytes4[] memory facetFunctionSelectors_) {
         LibFallbackRouter.Data storage data = LibFallbackRouter.accessData();
@@ -38,6 +38,23 @@ contract DiamondLoupe is IDiamondLoupe {
                 return facets_[i].functionSelectors;
             }
         }
+    }*/
+    function facetFunctionSelectors(address _facet) external view returns (bytes4[] memory) {
+        LibFallbackRouter.Data storage data = LibFallbackRouter.accessData();
+        uint maxLength = data.selectors.length();
+        uint index;
+        for (uint256 i; i < maxLength; i++) {
+            if (data.impls[bytes4(data.selectors.at(i))] == _facet) index++;
+        }
+        bytes4[] memory selectors = new bytes4[](index);
+        index = 0;
+        for (uint256 i; i < maxLength; i++) {
+            if (data.impls[bytes4(data.selectors.at(i))] != _facet) continue;
+            selectors[index] = bytes4(data.selectors.at(i));
+            index++;
+        }
+
+        return selectors;
     }
 
     /// @notice Get all the facet addresses used by a diamond.
