@@ -29,6 +29,30 @@ abstract contract FacetTest is BaseTest, ArtifactHelper {
     }
 
     function testOnyAdminCanSet() public {
+        string memory artifact = _retrieveContractJsonFromArtifact(facetName);
+        string memory methodIdentifierJson = _retrieveMethodIdentifierJsonFromArtifact(artifact);
+        ElementAbi[] memory functions = _retrieveFunctionsFromArtifact(artifact);
+        for (uint i; i < functions.length; i++) {
+            if (
+                areStringsEquals(functions[i].stateMutability, "view") ||
+                areStringsEquals(functions[i].stateMutability, "pure") ||
+                isException(functions[i])
+            ) continue;
+
+            bytes memory payload = getPayload(functions[i]);
+
+            vm.prank(AN_USER);
+            (bool success, bytes memory data) = DAO.call(payload);
+
+            assertFalse(success);
+            assertEq(
+                data,
+                abi.encodeWithSelector(LibDaoAccess.MissingRole.selector, AN_USER, ADMIN_ROLE)
+            );
+        }
+    }
+
+    /*function testOnyAdminCanSet2() public {
         vm.prank(AN_USER);
         bytes4[] memory selectors = FallbackRouter(DAO).getSelectorList();
         //bytes4[] memory selectors = DiamondLoupe(DAO).facetFunctionSelectors(IMPL);
@@ -84,11 +108,11 @@ abstract contract FacetTest is BaseTest, ArtifactHelper {
                 areStringsEquals(functions[functionId].stateMutability, "pure")
             ) continue;
 
-            /*emit log_named_string("functionIdentifier", ids[i]);
-            emit log_named_uint("functionId", functionId);
-            emit log_named_bytes32("selector", methods[ids[i]].selector);
-            emit log_named_string("signature", methods[ids[i]].signature);
-            emit log_named_address("impl", methods[ids[i]].impl);*/
+//            emit log_named_string("functionIdentifier", ids[i]);
+//            emit log_named_uint("functionId", functionId);
+//            emit log_named_bytes32("selector", methods[ids[i]].selector);
+//            emit log_named_string("signature", methods[ids[i]].signature);
+//            emit log_named_address("impl", methods[ids[i]].impl);
 
             bytes memory payload = getPayload(ids[i], functions[functionId]);
 
@@ -104,6 +128,15 @@ abstract contract FacetTest is BaseTest, ArtifactHelper {
 
         // Uncomment next line to see all inputTypes
         //_setInputTypesFromArtifact(artifact);
+    }*/
+
+    function getPayload(ElementAbi memory elementAbi) internal view returns (bytes memory) {
+        bytes memory payload;
+        payload = bytes.concat(payload, _retrieveSelectorFromElement(elementAbi));
+        for (uint i; i < elementAbi.inputs.length; i++) {
+            payload = bytes.concat(payload, bytes32(0));
+        }
+        return payload;
     }
 
     function getPayload(
@@ -127,5 +160,13 @@ abstract contract FacetTest is BaseTest, ArtifactHelper {
         }
 
         return 1000;
+    }
+
+    function isException(ElementAbi memory elementAbi) internal returns (bool) {
+        return
+            isArrayContain(
+                _methodIdentifierFromSelector(_retrieveSelectorFromElement(elementAbi)),
+                functionExceptionIdentifiers
+            );
     }
 }

@@ -146,6 +146,12 @@ abstract contract ArtifactHelper is StringHelper, Test {
         return slice(startPosition, end, json);
     }
 
+    function _retrieveSelectorFromElement(
+        ElementAbi memory elementAbi
+    ) internal pure returns (bytes4) {
+        return bytes4(keccak256(bytes(_retrieveSignatureFromElement(elementAbi))));
+    }
+
     function _retrieveSignatureFromElement(
         ElementAbi memory elementAbi
     ) internal pure returns (string memory) {
