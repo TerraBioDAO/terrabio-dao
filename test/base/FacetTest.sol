@@ -30,8 +30,8 @@ abstract contract FacetTest is BaseTest, ArtifactHelper {
 
     function testOnyAdminCanSet() public {
         string memory artifact = _retrieveContractJsonFromArtifact(facetName);
-        string memory methodIdentifierJson = _retrieveMethodIdentifierJsonFromArtifact(artifact);
         ElementAbi[] memory functions = _retrieveFunctionsFromArtifact(artifact);
+        delete artifact;
         for (uint i; i < functions.length; i++) {
             if (
                 areStringsEquals(functions[i].stateMutability, "view") ||
