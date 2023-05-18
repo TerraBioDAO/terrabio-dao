@@ -7,3 +7,7 @@
 [submodule "lib/dynamic-memory-arrays"]
 	path = lib/dynamic-memory-arrays
 	url = https://github.com/RaphaelHardFork/dynamic-memory-arrays
+[submodule "lib/foundry-test-helpers"]
+	path = lib/foundry-test-helpers
+	url = https://github.com/steftroubadour/foundry-test-helpers
+	branch = v0.0.3
