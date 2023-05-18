@@ -4,3 +4,6 @@
 [submodule "lib/openzeppelin-contracts"]
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "lib/dynamic-memory-arrays"]
+	path = lib/dynamic-memory-arrays
+	url = https://github.com/RaphaelHardFork/dynamic-memory-arrays
