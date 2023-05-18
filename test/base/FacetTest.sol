@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 
 import { BaseTest } from "./BaseTest.t.sol";
 
-import { ArtifactHelper } from "test/base/ArtifactHelper.sol";
+import { ArtifactHelper } from "foundry-test-helpers/helper/ArtifactHelper.sol";
 
 import { FallbackRouter } from "src/fallback_router/FallbackRouter.sol";
 import { DiamondLoupe } from "src/diamond_retrocompability/DiamondLoupe.sol";
@@ -23,13 +23,13 @@ abstract contract FacetTest is BaseTest, ArtifactHelper {
     function testSetUp() public {
         assertFalse(isEmptyString(facetName));
         // ⚠️This function will revert if the facet name is not right
-        _retrieveContractJsonFromArtifact(facetName);
+        retrieveContractArtifact(facetName);
         // ⚠️This function will revert if the test contract not exists
-        _retrieveContractTestJsonFromArtifact(facetName);
+        retrieveContractTestArtifact(facetName);
     }
 
     function testOnyAdminCanSet() public {
-        string memory artifact = _retrieveContractJsonFromArtifact(facetName);
+        string memory artifact = retrieveContractArtifact(facetName);
         ElementAbi[] memory functions = _retrieveFunctionsFromArtifact(artifact);
         delete artifact;
         for (uint i; i < functions.length; i++) {
@@ -96,7 +96,7 @@ abstract contract FacetTest is BaseTest, ArtifactHelper {
         // Test if all ids are in the method identifiers list construct from selectors list.
         assertLe(ids.length, methodIdentifiers.length);
         for (uint i; i < ids.length; i++) {
-            assertTrue(isArrayContain(ids[i], methodIdentifiers));
+            assertTrue(isContain(ids[i], methodIdentifiers));
         }
 
         // Test that all functions (except exceptions) that change Storage have onlyAdmin requirement
@@ -130,7 +130,7 @@ abstract contract FacetTest is BaseTest, ArtifactHelper {
         //_setInputTypesFromArtifact(artifact);
     }*/
 
-    function getPayload(ElementAbi memory elementAbi) internal view returns (bytes memory) {
+    function getPayload(ElementAbi memory elementAbi) internal pure returns (bytes memory) {
         bytes memory payload;
         payload = bytes.concat(payload, _retrieveSelectorFromElement(elementAbi));
         for (uint i; i < elementAbi.inputs.length; i++) {
@@ -162,11 +162,31 @@ abstract contract FacetTest is BaseTest, ArtifactHelper {
         return 1000;
     }
 
-    function isException(ElementAbi memory elementAbi) internal returns (bool) {
+    function isException(ElementAbi memory elementAbi) internal view returns (bool) {
         return
-            isArrayContain(
+            isContain(
                 _methodIdentifierFromSelector(_retrieveSelectorFromElement(elementAbi)),
                 functionExceptionIdentifiers
             );
+    }
+
+    function retrieveContractArtifact(
+        string memory contractName
+    ) internal view returns (string memory) {
+        string memory path = string.concat("out/", contractName, ".sol/", contractName, ".json");
+        return vm.readFile(path);
+    }
+
+    function retrieveContractTestArtifact(
+        string memory contractName
+    ) internal view returns (string memory) {
+        string memory path = string.concat(
+            "out/",
+            contractName,
+            ".t.sol/",
+            contractName,
+            "_security_test.json"
+        );
+        return vm.readFile(path);
     }
 }
