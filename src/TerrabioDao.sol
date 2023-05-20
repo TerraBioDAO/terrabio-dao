@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
-import {LibFallbackRouter} from "./fallback_router/LibFallbackRouter.sol";
+import { LibFallbackRouter } from "./fallback_router/LibFallbackRouter.sol";
 
 /**
  * @title Unique storage contract for the DAO system
@@ -14,24 +14,18 @@ import {LibFallbackRouter} from "./fallback_router/LibFallbackRouter.sol";
 contract TerrabioDao {
     constructor(address daoAccess, address fallbackRouter) {
         // bootstrap `DaoAccess` storage
-        (bool success, ) = daoAccess.delegatecall(
-            abi.encodeWithSignature("bootstrap()")
-        );
+        (bool success, ) = daoAccess.delegatecall(abi.encodeWithSignature("bootstrap()"));
         if (!success) revert("DaoAccess: Incorrect bootstrap");
 
         // bootstrap `FallbackRouter` bootstrap
-        (success, ) = fallbackRouter.delegatecall(
-            abi.encodeWithSignature("bootstrap()")
-        );
+        (success, ) = fallbackRouter.delegatecall(abi.encodeWithSignature("bootstrap()"));
         if (!success) revert("Router: Incorrect bootstrap");
     }
 
     /// @dev Forwards calls to the appropriate implementation contract.
     fallback() external payable {
         // This is used in assembly below as impls.slot.
-        mapping(bytes4 => address) storage impls = LibFallbackRouter
-            .accessData()
-            .impls;
+        mapping(bytes4 => address) storage impls = LibFallbackRouter.accessData().impls;
 
         assembly {
             let cdlen := calldatasize()
@@ -59,10 +53,7 @@ contract TerrabioDao {
                 // abi.encodeWithSelector(
                 //   bytes4(keccak256("NotImplementedError(bytes4)")),
                 //   selector)
-                mstore(
-                    0,
-                    0x734e6e1c00000000000000000000000000000000000000000000000000000000
-                )
+                mstore(0, 0x734e6e1c00000000000000000000000000000000000000000000000000000000)
                 mstore(4, selector)
                 revert(0, 0x24)
             }

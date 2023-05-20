@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
-import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
+import { EnumerableSet } from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
 
 library LibMembers {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -20,8 +20,7 @@ library LibMembers {
     ////////////////////////////////////////////////////////////////////////////////////////////////*/
 
     /// @dev Storage slot for Data struct
-    bytes32 internal constant STORAGE_SLOT =
-        keccak256("terrabiodao.contracts.storage.Members.v1");
+    bytes32 internal constant STORAGE_SLOT = keccak256("terrabiodao.contracts.storage.Members.v1");
 
     /// @return data Data struct at `STORAGE_SLOT`
     function accessData() internal pure returns (Data storage data) {

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
 import { BaseTest } from "test/base/BaseTest.t.sol";
+
 import { ADMIN_ROLE, MEMBER_ROLE } from "src/dao_access/Roles.sol";
 
 import { DaoAccess } from "src/dao_access/DaoAccess.sol";
@@ -244,5 +245,23 @@ contract DaoAccess_test is BaseTest {
         vm.prank(USERS[0]);
         vm.expectRevert(abi.encodeWithSignature("MissingRole(address,bytes32)", USERS[0], ROLE_4));
         roleGated.gate(ROLE_4);
+    }
+}
+
+import { FacetTest } from "test/base/FacetTest.sol";
+
+contract DaoAccess_security_test is FacetTest {
+    function setUp() public {
+        facetName = "DaoAccess";
+        functionExceptionIdentifiers.push("2f2ff15d"); // grantRole
+        functionExceptionIdentifiers.push("36568abe"); // renounceRole
+        functionExceptionIdentifiers.push("d547741f"); // revokeRole
+        functionExceptionIdentifiers.push("dfde5e58"); // setAdminRole
+
+        _newUsersSet(0, 4);
+        _deployFullDAO(USERS);
+
+        // After Dao deployment
+        IMPL = ACCESS;
     }
 }

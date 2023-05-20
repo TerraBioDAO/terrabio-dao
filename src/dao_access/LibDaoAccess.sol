@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
 /**
  * @title Library for events, errors, data layout and storage location
@@ -10,11 +10,7 @@ pragma solidity ^0.8.13;
 
 library LibDaoAccess {
     /// @dev Emitted when adding, replacing or removing role for an account
-    event RoleUpdated(
-        address indexed account,
-        bytes32 indexed fromRoles,
-        bytes32 indexed toRoles
-    );
+    event RoleUpdated(address indexed account, bytes32 indexed fromRoles, bytes32 indexed toRoles);
 
     event RoleAdminUpdated(
         bytes32 indexed role,

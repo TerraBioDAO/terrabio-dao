@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
-import {EnumerableSet} from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
+import { EnumerableSet } from "openzeppelin-contracts/utils/structs/EnumerableSet.sol";
 
-import {Implementation} from "src/common/Implementation.sol";
-import {LibMembers} from "src/common/LibMembers.sol";
-import {ADMIN_ROLE, MEMBER_ROLE} from "./Roles.sol";
-import {LibDaoAccess} from "./LibDaoAccess.sol";
+import { Implementation } from "src/common/Implementation.sol";
+import { LibMembers } from "src/common/LibMembers.sol";
+import { ADMIN_ROLE, MEMBER_ROLE } from "./Roles.sol";
+import { LibDaoAccess } from "./LibDaoAccess.sol";
 
 /**
  * @title Implementation for AccessControl in the DAO.
@@ -34,13 +34,9 @@ contract DaoAccess is Implementation {
             // warning with default role 0
             senderRole == 0 ||
             // neither adminRole nor DAO's ADMIN
-            (senderRole & adminRole != adminRole &&
-                senderRole & ADMIN_ROLE != ADMIN_ROLE)
+            (senderRole & adminRole != adminRole && senderRole & ADMIN_ROLE != ADMIN_ROLE)
         ) {
-            revert LibDaoAccess.NotRoleOperator(
-                role,
-                adminRole == 0 ? ADMIN_ROLE : adminRole
-            );
+            revert LibDaoAccess.NotRoleOperator(role, adminRole == 0 ? ADMIN_ROLE : adminRole);
         }
         _;
     }
@@ -73,10 +69,7 @@ contract DaoAccess is Implementation {
      * @param role the roles(s) to grant
      * @param account address to assign new role(s)
      */
-    function grantRole(
-        bytes32 role,
-        address account
-    ) external onlyAdminRole(role) {
+    function grantRole(bytes32 role, address account) external onlyAdminRole(role) {
         if (!hasRole(role, account)) {
             if (role & MEMBER_ROLE == MEMBER_ROLE) {
                 LibMembers.accessData().members.add(account);
@@ -96,10 +89,7 @@ contract DaoAccess is Implementation {
      * @param role the roles(s) to revoke
      * @param account address to assign new role(s)
      */
-    function revokeRole(
-        bytes32 role,
-        address account
-    ) external onlyAdminRole(role) {
+    function revokeRole(bytes32 role, address account) external onlyAdminRole(role) {
         if (hasRole(role, account)) {
             if (role & MEMBER_ROLE == MEMBER_ROLE) {
                 LibMembers.accessData().members.remove(account);

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
 import { Implementation } from "src/common/Implementation.sol";
 import { RoleControl } from "src/dao_access/RoleControl.sol";
@@ -46,6 +46,7 @@ contract Pausable is Implementation, RoleControl, PauseControl {
      * @dev Returns true if the contract is paused, and false otherwise.
      */
     function paused() public view returns (bool) {
+        assert(true);
         return _data().paused;
     }
 

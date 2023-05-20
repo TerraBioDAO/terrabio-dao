@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
 import { UtilsTest } from "./UtilsTest.t.sol";
 
@@ -12,6 +12,7 @@ import { DaoAccess } from "src/dao_access/DaoAccess.sol";
 import { DiamondLoupe } from "src/diamond_retrocompability/DiamondLoupe.sol";
 import { Governance } from "src/governance/Governance.sol";
 import { Pausable } from "src/pausable/Pausable.sol";
+import { SelectorPause } from "src/pausable/SelectorPause.sol";
 
 contract BaseTest is UtilsTest {
     // address of main contract
@@ -22,6 +23,7 @@ contract BaseTest is UtilsTest {
     address internal ROUTER;
     address internal DIAMOND;
     address internal PAUSABLE;
+    address internal SELECTOR_PAUSE;
     address internal GOV;
 
     modifier daoDeployed() {
@@ -41,8 +43,8 @@ contract BaseTest is UtilsTest {
     {
         (router, access) = _deployDAO();
         diamond = _bootstrapDiamondLoupe();
+        _bootstrapPausable();
         gov = _bootstrapGovernance(members);
-        // _bootstrapPausable();
     }
 
     function _deployDAO() internal returns (FallbackRouter router, DaoAccess access) {
@@ -151,11 +153,45 @@ contract BaseTest is UtilsTest {
         vm.label(GOV, "GOV");
     }
 
-    function _bootstrapPausable() internal returns (Pausable pausable) {
+    function _bootstrapPausable()
+        internal
+        returns (Pausable pausable, SelectorPause selectorPause)
+    {
         pausable = new Pausable();
         PAUSABLE = address(pausable);
 
-        // waiting for new Pausable impl
+        // register functions
+        bytes4[] memory selectors = new bytes4[](3);
+        selectors[0] = Pausable.unpause.selector;
+        selectors[1] = Pausable.pause.selector;
+        selectors[2] = Pausable.paused.selector;
+
+        address[] memory impl = new address[](3);
+        impl[0] = PAUSABLE;
+        impl[1] = PAUSABLE;
+        impl[2] = PAUSABLE;
+
+        vm.startPrank(OWNER);
+        FallbackRouter(DAO).batchUpdateFunction(selectors, impl);
+
+        selectorPause = new SelectorPause();
+        SELECTOR_PAUSE = address(selectorPause);
+
+        selectors = new bytes4[](4);
+        selectors[0] = SelectorPause.pauseModule.selector;
+        selectors[1] = SelectorPause.unpauseModule.selector;
+        selectors[2] = SelectorPause.batchPauseSelectors.selector;
+        selectors[3] = SelectorPause.batchUnpauseSelectors.selector;
+
+        impl = new address[](4);
+        impl[0] = SELECTOR_PAUSE;
+        impl[1] = SELECTOR_PAUSE;
+        impl[2] = SELECTOR_PAUSE;
+        impl[3] = SELECTOR_PAUSE;
+
+        FallbackRouter(DAO).batchUpdateFunction(selectors, impl);
+
+        vm.stopPrank();
     }
 
     /*////////////////////////////////////////////////////////////////////////////////////////////////

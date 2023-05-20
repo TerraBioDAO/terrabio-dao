@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 import { Strings } from "openzeppelin-contracts/utils/Strings.sol";
@@ -12,7 +12,8 @@ contract UtilsTest is Test {
     bytes4 internal SELECTOR_0;
 
     // roles
-    address internal constant OWNER = address(501);
+    address internal constant OWNER = address(501); // 1f5
+    address AN_USER = address(0x9);
     address[] internal USERS;
 
     function _newUsersSet(uint160 offset, uint256 length) internal {

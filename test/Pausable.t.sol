@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.13;
+pragma solidity 0.8.16;
 
 import { Test, Vm } from "forge-std/Test.sol";
 
@@ -101,5 +101,20 @@ contract Pausable_test is Test {
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSignature("NotPaused()"));
         pausable.unpause();
+    }
+}
+
+import { FacetTest } from "test/base/FacetTest.sol";
+
+contract Pausable_security_test is FacetTest {
+    function setUp() public {
+        facetName = "Pausable";
+        // functionExceptionIdentifiers.push("execute");
+
+        _newUsersSet(0, 4);
+        _deployFullDAO(USERS);
+
+        // After Dao deployment
+        IMPL = PAUSABLE;
     }
 }
